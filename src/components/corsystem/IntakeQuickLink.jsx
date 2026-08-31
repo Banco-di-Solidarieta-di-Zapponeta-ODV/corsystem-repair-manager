@@ -38,6 +38,7 @@ export default function IntakeQuickLink() {
           <a className={styles.workLink} href={`/lavorazione/${encodeURIComponent(state.repairId)}`} aria-label="Apri diagnosi e preventivo CorSystem">Diagnosi / Preventivo</a>
         </>
       ) : null}
+      <a className={styles.dashboardLink} href="/dashboard-operativo" aria-label="Apri dashboard operativo CorSystem">Dashboard</a>
       <a className={styles.notificationLink} href="/notifiche" aria-label="Apri console notifiche CorSystem">Notifiche</a>
       <a className={styles.warehouseLink} href="/magazzino" aria-label="Apri magazzino ricambi CorSystem">Magazzino</a>
       <a className={styles.deviceLink} href="/dispositivi" aria-label="Apri archivio dispositivi CorSystem">Dispositivi</a>
