@@ -28,6 +28,7 @@
     "deploy:verify": "node scripts/deployment/verify.mjs",
     "deploy:apply": "node scripts/deployment/deploy.mjs",
     "deploy:rollback": "node scripts/deployment/rollback.mjs",
+    "staging:from-dump": "node scripts/deployment/staging-from-dump.mjs",
     "mysql:setup": "node scripts/mysql-setup.mjs",
     "plesk:setup": "node scripts/plesk-setup.mjs",
     "plesk:pack": "node scripts/package-plesk.mjs",
