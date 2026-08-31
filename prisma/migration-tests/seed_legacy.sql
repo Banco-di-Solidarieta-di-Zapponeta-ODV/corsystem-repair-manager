@@ -13,7 +13,7 @@ INSERT INTO `Repair` (
 (
   'repair-imei-1', 'LEGACY-100001', 'client-imei', 'Samsung', 'Galaxy S25', 'nero', '123456789012345',
   'Display rotto', '', '', '', JSON_ARRAY(), '预定', '2026-08-01 10:00', '', '', '',
-  0, 0, 'none', 0, 0, '', '', '', '', 'public-imei-1', 'repair', '', '', '', '', FALSE,
+  129.00, 0, 'none', 0, 0, '', '', '', '', 'public-imei-1', 'repair', '', '', '', '', FALSE,
   JSON_ARRAY(), JSON_ARRAY(), 'legacy 100001 samsung galaxy s25 123456789012345', 100001, NOW(3), NOW(3)
 ),
 (
@@ -25,7 +25,7 @@ INSERT INTO `Repair` (
 (
   'repair-legacy-1', 'LEGACY-100003', 'client-legacy', 'Apple', 'MacBook Air M2', 'grigio|A2681', '',
   'Non si accende', '', '', '', JSON_ARRAY(), '预定', '2026-08-15 09:00', '', '', '',
-  0, 0, 'none', 0, 0, '', '', '', '', 'public-legacy-1', 'repair', '', '', '', '', FALSE,
+  240.00, 0, 'none', 0, 0, '', '', '', '', 'public-legacy-1', 'repair', '', '', '', '', FALSE,
   JSON_ARRAY(), JSON_ARRAY(), 'legacy 100003 apple macbook air m2', 100003, NOW(3), NOW(3)
 ),
 (
