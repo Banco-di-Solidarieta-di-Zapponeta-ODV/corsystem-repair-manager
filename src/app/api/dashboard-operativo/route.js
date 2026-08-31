@@ -1,5 +1,6 @@
-import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
+import { authErrorResponse, hasCapability, requireCapability } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { CAPABILITIES } from "@/features/access/roles";
 import {
   CLOSED_REPAIR_STATUSES,
   canonicalRepairStatus,
@@ -12,7 +13,10 @@ import {
 
 export async function GET() {
   try {
-    await requireAnyPageAccess(["repairs", "finance"]);
+    const staff = await requireCapability(CAPABILITIES.DASHBOARD_VIEW);
+    const canSeeFinance = hasCapability(staff, CAPABILITIES.DASHBOARD_FINANCE);
+    const canSeeInventory = hasCapability(staff, CAPABILITIES.INVENTORY_VIEW);
+    const canSeeNotifications = hasCapability(staff, CAPABILITIES.NOTIFICATIONS_VIEW);
 
     const now = new Date();
     const last30Days = new Date(now.getTime() - 30 * 86400000);
@@ -36,32 +40,36 @@ export async function GET() {
         }
       }),
       prisma.quote.count({ where: { status: "SENT" } }),
-      prisma.payment.aggregate({
-        where: { paidAt: { gte: last30Days } },
-        _sum: { amount: true },
-        _count: { _all: true }
-      }),
-      prisma.repair.findMany({
-        where: { deliveredAt: { gte: last30Days } },
-        select: { finalAmount: true, finalCostAmount: true, finalMargin: true }
-      }),
-      prisma.repair.findMany({
-        where: { deliveredAt: { gte: last90Days } },
-        select: { createdAt: true, deliveredAt: true }
-      }),
-      prisma.part.findMany({
-        where: { active: true },
-        select: {
-          id: true,
-          defaultName: true,
-          sku: true,
-          stockQty: true,
-          minStock: true,
-          location: true,
-          supplier: { select: { name: true } }
-        }
-      }),
-      prisma.notification.count({ where: { status: "FAILED" } })
+      canSeeFinance
+        ? prisma.payment.aggregate({ where: { paidAt: { gte: last30Days } }, _sum: { amount: true }, _count: { _all: true } })
+        : Promise.resolve({ _sum: { amount: 0 }, _count: { _all: 0 } }),
+      canSeeFinance
+        ? prisma.repair.findMany({
+            where: { deliveredAt: { gte: last30Days } },
+            select: { finalAmount: true, finalCostAmount: true, finalMargin: true }
+          })
+        : Promise.resolve([]),
+      canSeeFinance
+        ? prisma.repair.findMany({
+            where: { deliveredAt: { gte: last90Days } },
+            select: { createdAt: true, deliveredAt: true }
+          })
+        : Promise.resolve([]),
+      canSeeInventory
+        ? prisma.part.findMany({
+            where: { active: true },
+            select: {
+              id: true,
+              defaultName: true,
+              sku: true,
+              stockQty: true,
+              minStock: true,
+              location: true,
+              supplier: { select: { name: true } }
+            }
+          })
+        : Promise.resolve([]),
+      canSeeNotifications ? prisma.notification.count({ where: { status: "FAILED" } }) : Promise.resolve(0)
     ]);
 
     const pipeline = pipelineCounts(openRepairs);
@@ -90,14 +98,11 @@ export async function GET() {
       }))
       .filter((part) => part.minStock > 0 && part.stockQty <= part.minStock)
       .sort((a, b) => (a.stockQty - a.minStock) - (b.stockQty - b.minStock) || a.name.localeCompare(b.name, "it"));
-    const lowStock = lowStockAll.slice(0, 20);
 
     const deliveredValue = money(delivered30d.reduce((sum, row) => sum + Number(row.finalAmount || 0), 0));
     const deliveredCost = money(delivered30d.reduce((sum, row) => sum + Number(row.finalCostAmount || 0), 0));
     const deliveredMargin = money(delivered30d.reduce((sum, row) => sum + Number(row.finalMargin || 0), 0));
-    const turnaroundHours = delivered90d
-      .map((row) => durationHours(row.createdAt, row.deliveredAt))
-      .filter((value) => value !== null);
+    const turnaroundHours = delivered90d.map((row) => durationHours(row.createdAt, row.deliveredAt)).filter((value) => value !== null);
     const averageTurnaroundHours = turnaroundHours.length
       ? Math.round((turnaroundHours.reduce((sum, value) => sum + value, 0) / turnaroundHours.length) * 10) / 10
       : 0;
@@ -108,6 +113,12 @@ export async function GET() {
 
     return Response.json({
       generatedAt: now.toISOString(),
+      role: staff.role,
+      visibility: {
+        finance: canSeeFinance,
+        inventory: canSeeInventory,
+        notifications: canSeeNotifications
+      },
       kpis: {
         openRepairs: openRepairs.length,
         pendingQuotes,
@@ -115,23 +126,25 @@ export async function GET() {
         ready: readyCount,
         overdueReady,
         unassigned,
-        failedNotifications,
-        lowStock: lowStockAll.length
+        failedNotifications: canSeeNotifications ? failedNotifications : null,
+        lowStock: canSeeInventory ? lowStockAll.length : null
       },
       pipeline,
       technicians: technicianLoad(openRepairs),
-      financial30d: {
-        payments: money(payments30d._sum.amount),
-        paymentMovements: payments30d._count._all,
-        deliveredValue,
-        deliveredCost,
-        margin: deliveredMargin,
-        deliveries: delivered30d.length,
-        averageTicket: delivered30d.length ? money(deliveredValue / delivered30d.length) : 0,
-        averageTurnaroundHours
-      },
+      financial30d: canSeeFinance
+        ? {
+            payments: money(payments30d._sum.amount),
+            paymentMovements: payments30d._count._all,
+            deliveredValue,
+            deliveredCost,
+            margin: deliveredMargin,
+            deliveries: delivered30d.length,
+            averageTicket: delivered30d.length ? money(deliveredValue / delivered30d.length) : 0,
+            averageTurnaroundHours
+          }
+        : null,
       alerts,
-      lowStock
+      lowStock: canSeeInventory ? lowStockAll.slice(0, 20) : []
     });
   } catch (error) {
     return authErrorResponse(error);
