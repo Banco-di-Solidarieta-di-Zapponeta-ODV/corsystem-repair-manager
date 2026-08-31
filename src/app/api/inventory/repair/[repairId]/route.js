@@ -1,5 +1,6 @@
-import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
+import { authErrorResponse, requireAnyCapability, requireCapability } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { CAPABILITIES } from "@/features/access/roles";
 import { nonNegativeMoney, positiveQty } from "@/features/inventory/domain";
 import { notifyRepairEvent } from "@/features/notifications/server";
 
@@ -7,7 +8,7 @@ const WORKABLE_STATUSES = new Set(["AUTORIZZATO", "ATTESA_RICAMBIO", "IN_LAVORAZ
 
 export async function GET(_request, { params }) {
   try {
-    await requireAnyPageAccess(["repairs"]);
+    await requireAnyCapability([CAPABILITIES.REPAIR_PARTS_MANAGE, CAPABILITIES.INVENTORY_VIEW]);
     const { repairId } = await params;
     const repair = await prisma.repair.findUnique({
       where: { id: repairId },
@@ -61,7 +62,7 @@ export async function GET(_request, { params }) {
 
 export async function POST(request, { params }) {
   try {
-    const staff = await requireAnyPageAccess(["repairs"]);
+    const staff = await requireCapability(CAPABILITIES.REPAIR_PARTS_MANAGE);
     const { repairId } = await params;
     const body = await request.json();
     const action = String(body?.action || "").trim();
