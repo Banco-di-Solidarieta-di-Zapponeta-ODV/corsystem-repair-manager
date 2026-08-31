@@ -28,10 +28,13 @@ export default function IntakeQuickLink() {
   return (
     <div className={styles.stack}>
       {state.repairId ? (
-        <div className={styles.printActions}>
-          <a href={`/ricevuta/${encodeURIComponent(state.repairId)}?format=a4`} target="_blank" rel="noreferrer">A4</a>
-          <a href={`/ricevuta/${encodeURIComponent(state.repairId)}?format=thermal`} target="_blank" rel="noreferrer">80 mm</a>
-        </div>
+        <>
+          <div className={styles.printActions}>
+            <a href={`/ricevuta/${encodeURIComponent(state.repairId)}?format=a4`} target="_blank" rel="noreferrer">A4</a>
+            <a href={`/ricevuta/${encodeURIComponent(state.repairId)}?format=thermal`} target="_blank" rel="noreferrer">80 mm</a>
+          </div>
+          <a className={styles.workLink} href={`/lavorazione/${encodeURIComponent(state.repairId)}`} aria-label="Apri diagnosi e preventivo CorSystem">Diagnosi / Preventivo</a>
+        </>
       ) : null}
       <a className={styles.deviceLink} href="/dispositivi" aria-label="Apri archivio dispositivi CorSystem">Dispositivi</a>
       <a className={styles.link} href="/intake" aria-label="Apri accettazione CorSystem">
