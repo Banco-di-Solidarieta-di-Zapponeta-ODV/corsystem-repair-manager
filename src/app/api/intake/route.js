@@ -68,7 +68,7 @@ export async function POST(request) {
       }
 
       const searchText = buildRepairSearchText(repairDraft, { client, items: [], sourceTicket: "" });
-      const signedAt = body.signatureDataUrl ? now.toISOString() : "";
+      const signedAt = now.toISOString();
       const repair = await tx.repair.create({
         data: {
           ticket,
@@ -239,6 +239,7 @@ function validateRequest(body) {
   const hasDevice = String(body?.deviceId || "").trim() || body?.device;
   if (!hasDevice) throwHttpError(400, "Seleziona o registra un dispositivo");
   if (!String(body?.reportedIssue || "").trim()) throwHttpError(400, "Descrivi il problema segnalato dal cliente");
+  if (!String(body?.signatureDataUrl || "").startsWith("data:image/")) throwHttpError(400, "La firma del cliente è obbligatoria");
   if (body?.privacyAccepted !== true) throwHttpError(400, "È necessaria l'accettazione dell'informativa privacy");
 }
 
