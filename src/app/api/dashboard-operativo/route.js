@@ -28,9 +28,6 @@ export async function GET() {
           status: true,
           technicianId: true,
           technicianName: true,
-          budget: true,
-          finalAmount: true,
-          costAmount: true,
           readyAt: true,
           createdAt: true,
           updatedAt: true,
@@ -81,7 +78,7 @@ export async function GET() {
       technicianName: repair.technicianName || "Non assegnato"
     }));
 
-    const lowStock = activeParts
+    const lowStockAll = activeParts
       .map((part) => ({
         id: part.id,
         name: part.defaultName,
@@ -92,8 +89,8 @@ export async function GET() {
         supplierName: part.supplier?.name || ""
       }))
       .filter((part) => part.minStock > 0 && part.stockQty <= part.minStock)
-      .sort((a, b) => (a.stockQty - a.minStock) - (b.stockQty - b.minStock) || a.name.localeCompare(b.name, "it"))
-      .slice(0, 20);
+      .sort((a, b) => (a.stockQty - a.minStock) - (b.stockQty - b.minStock) || a.name.localeCompare(b.name, "it"));
+    const lowStock = lowStockAll.slice(0, 20);
 
     const deliveredValue = money(delivered30d.reduce((sum, row) => sum + Number(row.finalAmount || 0), 0));
     const deliveredCost = money(delivered30d.reduce((sum, row) => sum + Number(row.finalCostAmount || 0), 0));
@@ -119,7 +116,7 @@ export async function GET() {
         overdueReady,
         unassigned,
         failedNotifications,
-        lowStock: lowStock.length
+        lowStock: lowStockAll.length
       },
       pipeline,
       technicians: technicianLoad(openRepairs),
