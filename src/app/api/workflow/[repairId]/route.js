@@ -2,6 +2,7 @@ import crypto from "node:crypto";
 import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeDiagnosisInput, normalizeQuoteInput } from "@/features/workflow/domain";
+import { notifyRepairEvent } from "@/features/notifications/server";
 
 const EARLY_REPAIR_STATUSES = new Set([
   "预定", "预定到货", "预定已到货", "待开始", "待检测", "等客户确认",
@@ -123,7 +124,16 @@ export async function POST(request, { params }) {
 
     if (action === "quote-create") return Response.json(await createQuote(repairId, body.quote, staff));
     if (action === "quote-update") return Response.json(await updateQuote(repairId, body.quoteId, body.quote, staff));
-    if (action === "quote-send") return Response.json(await sendQuote(repairId, body.quoteId, staff));
+    if (action === "quote-send") {
+      const result = await sendQuote(repairId, body.quoteId, staff);
+      const notification = await notifyRepairEvent(repairId, "QUOTE_SENT", {
+        quoteId: result.quote.id,
+        quotePublicToken: result.quote.publicToken,
+        amount: Number(result.quote.total),
+        dedupeSuffix: `v${result.quote.version}`
+      }).catch((error) => ({ error: String(error?.message || error) }));
+      return Response.json({ ...result, notification });
+    }
     if (action === "quote-new-version") return Response.json(await newQuoteVersion(repairId, body.quoteId, staff));
     if (action === "quote-delete") return Response.json(await deleteDraftQuote(repairId, body.quoteId));
 
