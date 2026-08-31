@@ -13,7 +13,8 @@
 .deviceLink,
 .workLink,
 .warehouseLink,
-.partsLink {
+.partsLink,
+.closeLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -36,7 +37,8 @@
 .deviceLink,
 .workLink,
 .warehouseLink,
-.partsLink {
+.partsLink,
+.closeLink {
   min-height: 40px;
   padding: 8px 15px;
   background: rgba(255, 255, 255, .97);
@@ -61,11 +63,18 @@
   background: #ecfdf3;
 }
 
+.closeLink {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+
 .link:hover,
 .deviceLink:hover,
 .workLink:hover,
 .warehouseLink:hover,
-.partsLink:hover {
+.partsLink:hover,
+.closeLink:hover {
   transform: translateY(-1px);
   box-shadow: 0 15px 34px rgba(15, 23, 42, .22);
 }
@@ -116,7 +125,8 @@
   .deviceLink,
   .workLink,
   .warehouseLink,
-  .partsLink {
+  .partsLink,
+  .closeLink {
     min-height: 38px;
     padding: 8px 13px;
   }
