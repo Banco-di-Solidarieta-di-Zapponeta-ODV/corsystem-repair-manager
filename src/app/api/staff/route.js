@@ -3,13 +3,18 @@ import { getRevisionPatch } from "@/lib/data-store";
 import { prisma } from "@/lib/prisma";
 import { normalizeStaffRole, roleCapabilities, ROLE_LABELS, STAFF_ROLES } from "@/features/access/roles";
 
-export async function GET() {
+export async function GET(request) {
   try {
     await requireAdminStaff();
-    return Response.json({
-      users: await staffList(),
-      roles: STAFF_ROLES.map((role) => ({ role, label: ROLE_LABELS[role] }))
-    });
+    const users = await staffList();
+    const url = new URL(request.url);
+    if (url.searchParams.get("meta") === "1") {
+      return Response.json({
+        users,
+        roles: STAFF_ROLES.map((role) => ({ role, label: ROLE_LABELS[role] }))
+      });
+    }
+    return Response.json(users);
   } catch (error) {
     return authErrorResponse(error);
   }
