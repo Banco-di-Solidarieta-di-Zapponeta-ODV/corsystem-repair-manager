@@ -33,6 +33,7 @@ export default function IntakeQuickLink() {
           <a href={`/ricevuta/${encodeURIComponent(state.repairId)}?format=thermal`} target="_blank" rel="noreferrer">80 mm</a>
         </div>
       ) : null}
+      <a className={styles.deviceLink} href="/dispositivi" aria-label="Apri archivio dispositivi CorSystem">Dispositivi</a>
       <a className={styles.link} href="/intake" aria-label="Apri accettazione CorSystem">
         <span className={styles.plus}>＋</span>
         <span>Accettazione CorSystem</span>
