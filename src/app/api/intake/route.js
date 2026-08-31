@@ -13,6 +13,8 @@ import { DEVICE_TYPES, normalizeImei, normalizeSerial } from "@/features/devices
 import { repairDeviceFingerprint } from "@/features/devices/server";
 import { INTAKE_ACCESSORIES, INTAKE_CONDITION_FLAGS } from "@/features/intake/domain";
 
+const MAX_TICKET_ATTEMPTS = 3;
+
 export async function GET() {
   try {
     await requireAnyPageAccess(["repairs", "clients"]);
@@ -39,98 +41,111 @@ export async function POST(request) {
     const body = await request.json();
     validateRequest(body);
 
-    const result = await prisma.$transaction(async (tx) => {
-      const client = await resolveClient(tx, body);
-      const device = await resolveDevice(tx, body, client.id);
-      const { ticket, ticketSort } = await nextCorSystemTicket(tx);
-      const now = new Date();
-      const repairTime = formatRepairTime(now);
-      const intakeProperties = serializeIntakeProperties(body);
-
-      const repairDraft = {
-        ticket,
-        clientId: client.id,
-        deviceId: device.id,
-        brand: device.brand,
-        model: device.model,
-        imei: device.imei,
-        properties: intakeProperties,
-        issue: String(body.reportedIssue || "").trim(),
-        internalNote: String(body.internalNote || body.notes || "").trim(),
-        technicianId: String(body.technicianId || "").trim(),
-        technicianName: ""
-      };
-
-      if (repairDraft.technicianId) {
-        const technician = await tx.technician.findUnique({ where: { id: repairDraft.technicianId } });
-        if (!technician || !technician.active) throwHttpError(400, "Tecnico non valido");
-        repairDraft.technicianName = technician.name;
-      }
-
-      const searchText = buildRepairSearchText(repairDraft, { client, items: [], sourceTicket: "" });
-      const signedAt = now.toISOString();
-      const repair = await tx.repair.create({
-        data: {
-          ticket,
-          clientId: client.id,
-          deviceId: device.id,
-          brand: device.brand,
-          model: device.model,
-          properties: intakeProperties,
-          imei: device.imei,
-          issue: repairDraft.issue,
-          internalNote: repairDraft.internalNote,
-          passwordType: "",
-          passwordText: "",
-          passwordPattern: [],
-          status: "预定",
-          repairTime,
-          warrantyStart: "",
-          technicianId: repairDraft.technicianId,
-          technicianName: repairDraft.technicianName,
-          budget: 0,
-          deposit: 0,
-          paymentMethod: "none",
-          discountAmount: 0,
-          costAmount: 0,
-          frontPhoto: String(body.frontPhoto || ""),
-          backPhoto: String(body.backPhoto || ""),
-          signatureDataUrl: String(body.signatureDataUrl || ""),
-          signedAt,
-          publicToken: crypto.randomUUID(),
-          orderType: "repair",
-          sourceRepairId: "",
-          warrantyReason: "",
-          warrantyDiagnosis: "",
-          warrantyResolution: "",
-          warrantyChargeable: false,
-          statusHistory: [
-            {
-              status: "预定",
-              type: "intake-created",
-              at: now.toISOString(),
-              by: staff?.name || staff?.username || "CorSystem"
-            }
-          ],
-          notificationLog: [],
-          searchText,
-          ticketSort
-        }
-      });
-
-      return { client, device, repair };
-    });
-
+    const result = await createIntakeWithRetry(body, staff);
     return Response.json({
       ...result,
       _revisionPatch: await getRevisionPatch(["clients", "repairs"])
     });
   } catch (error) {
     if (error?.code === "P2002") {
-      return Response.json({ error: "Conflitto durante la creazione. Riprova." }, { status: 409 });
+      return Response.json({ error: "Conflitto durante la creazione del numero pratica. Riprova." }, { status: 409 });
     }
     return authErrorResponse(error);
   }
+}
+
+async function createIntakeWithRetry(body, staff) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= MAX_TICKET_ATTEMPTS; attempt += 1) {
+    try {
+      return await prisma.$transaction((tx) => createIntakeTransaction(tx, body, staff));
+    } catch (error) {
+      lastError = error;
+      if (error?.code !== "P2002" || attempt === MAX_TICKET_ATTEMPTS) throw error;
+    }
+  }
+  throw lastError;
+}
+
+async function createIntakeTransaction(tx, body, staff) {
+  const client = await resolveClient(tx, body);
+  const device = await resolveDevice(tx, body, client.id);
+  const { ticket, ticketSort } = await nextCorSystemTicket(tx);
+  const now = new Date();
+  const repairTime = formatRepairTime(now);
+  const intakeProperties = serializeIntakeProperties(body, now);
+
+  const repairDraft = {
+    ticket,
+    clientId: client.id,
+    deviceId: device.id,
+    brand: device.brand,
+    model: device.model,
+    imei: device.imei,
+    properties: intakeProperties,
+    issue: String(body.reportedIssue || "").trim(),
+    internalNote: String(body.internalNote || body.notes || "").trim(),
+    technicianId: String(body.technicianId || "").trim(),
+    technicianName: ""
+  };
+
+  if (repairDraft.technicianId) {
+    const technician = await tx.technician.findUnique({ where: { id: repairDraft.technicianId } });
+    if (!technician || !technician.active) throwHttpError(400, "Tecnico non valido");
+    repairDraft.technicianName = technician.name;
+  }
+
+  const searchText = buildRepairSearchText(repairDraft, { client, items: [], sourceTicket: "" });
+  const repair = await tx.repair.create({
+    data: {
+      ticket,
+      clientId: client.id,
+      deviceId: device.id,
+      brand: device.brand,
+      model: device.model,
+      properties: intakeProperties,
+      imei: device.imei,
+      issue: repairDraft.issue,
+      internalNote: repairDraft.internalNote,
+      passwordType: "",
+      passwordText: "",
+      passwordPattern: [],
+      status: "预定",
+      repairTime,
+      warrantyStart: "",
+      technicianId: repairDraft.technicianId,
+      technicianName: repairDraft.technicianName,
+      budget: 0,
+      deposit: 0,
+      paymentMethod: "none",
+      discountAmount: 0,
+      costAmount: 0,
+      frontPhoto: String(body.frontPhoto || ""),
+      backPhoto: String(body.backPhoto || ""),
+      signatureDataUrl: String(body.signatureDataUrl || ""),
+      signedAt: now.toISOString(),
+      publicToken: crypto.randomUUID(),
+      orderType: "repair",
+      sourceRepairId: "",
+      warrantyReason: "",
+      warrantyDiagnosis: "",
+      warrantyResolution: "",
+      warrantyChargeable: false,
+      statusHistory: [
+        {
+          status: "预定",
+          type: "intake-created",
+          at: now.toISOString(),
+          by: staff?.name || staff?.username || "CorSystem"
+        }
+      ],
+      notificationLog: [],
+      searchText,
+      ticketSort
+    }
+  });
+
+  return { client, device, repair };
 }
 
 async function resolveClient(tx, body) {
@@ -207,7 +222,7 @@ async function resolveDevice(tx, body, clientId) {
 }
 
 async function nextCorSystemTicket(tx) {
-  const year = new Date().getFullYear();
+  const year = Number(formatRepairTime(new Date()).slice(0, 4));
   const prefix = `CS-${year}-`;
   const latest = await tx.repair.findFirst({
     where: { ticket: { startsWith: prefix } },
@@ -223,14 +238,14 @@ async function nextCorSystemTicket(tx) {
   };
 }
 
-function serializeIntakeProperties(body) {
+function serializeIntakeProperties(body, now = new Date()) {
   return JSON.stringify({
     schema: "corsystem-intake-v1",
     initialCondition: uniqueStrings(body.initialCondition),
     accessories: uniqueStrings(body.accessories),
     notes: String(body.notes || "").trim(),
     privacyAccepted: body.privacyAccepted === true,
-    acceptedAt: new Date().toISOString()
+    acceptedAt: now.toISOString()
   });
 }
 
