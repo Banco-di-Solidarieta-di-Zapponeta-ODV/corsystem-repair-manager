@@ -31,6 +31,7 @@ export default function ClosureClient({ repairId }) {
 
   const repair = data?.repair;
   const financial = data?.financial;
+  const permissions = data?.permissions || {};
   const currentDraft = useMemo(() => repair?.finalTests?.find((item) => item.status === "DRAFT") || null, [repair]);
   const latestTest = repair?.finalTests?.[0] || null;
 
@@ -121,9 +122,10 @@ export default function ClosureClient({ repairId }) {
   if (loading) return <main className={styles.page}><div className={styles.loading}>Caricamento chiusura pratica...</div></main>;
   if (!data) return <main className={styles.page}><div className={styles.error}>{error || "Pratica non disponibile"}</div></main>;
 
-  const canTest = ["IN_LAVORAZIONE", "IN_TEST"].includes(repair.status);
-  const canReady = repair.status === "IN_TEST" && latestTest?.status === "PASSED";
-  const canDeliver = repair.status === "PRONTO" && !repair.delivery;
+  const canTest = Boolean(permissions.finalTest) && ["IN_LAVORAZIONE", "IN_TEST"].includes(repair.status);
+  const canReady = Boolean(permissions.finalTest) && repair.status === "IN_TEST" && latestTest?.status === "PASSED";
+  const canDeliver = Boolean(permissions.delivery) && repair.status === "PRONTO" && !repair.delivery;
+  const canPay = Boolean(permissions.payment);
   const closed = repair.status === "CONSEGNATO" || Boolean(repair.delivery);
 
   return (
@@ -142,65 +144,75 @@ export default function ClosureClient({ repairId }) {
         {error ? <div className={styles.error}>{error}</div> : null}
         {notice ? <div className={styles.notice}>{notice}</div> : null}
 
-        <section className={styles.metrics}>
-          <Metric label="Totale pratica" value={`€ ${money(financial.amountDue)}`} />
-          <Metric label="Incassato" value={`€ ${money(financial.amountPaid)}`} />
-          <Metric label="Saldo" value={`€ ${money(financial.balance)}`} />
-          <Metric label="Margine stimato" value={`€ ${money(financial.projectedMargin)}`} />
-        </section>
+        {financial ? (
+          <section className={styles.metrics}>
+            <Metric label="Totale pratica" value={`€ ${money(financial.amountDue)}`} />
+            <Metric label="Incassato" value={`€ ${money(financial.amountPaid)}`} />
+            <Metric label="Saldo" value={`€ ${money(financial.balance)}`} />
+            <Metric label="Margine stimato" value={`€ ${money(financial.projectedMargin)}`} />
+          </section>
+        ) : null}
 
-        <section className={styles.card}>
-          <div className={styles.sectionHead}><div><span>1</span><div><h2>Test finale</h2><p>Segna PASS, FAIL o N/A. Un FAIL rimanda la pratica in lavorazione.</p></div></div>{latestTest ? <strong>{testLabel(latestTest.status)}</strong> : null}</div>
-          <div className={styles.checks}>
-            {CHECKS.map(([key, label]) => (
-              <div className={styles.checkRow} key={key}>
-                <span>{label}</span>
-                <div className={styles.segmented}>
-                  {[["PASS", "OK"], ["FAIL", "KO"], ["NA", "N/A"]].map(([value, text]) => (
-                    <button key={value} type="button" disabled={!canTest || saving} className={checklist[key] === value ? styles.selected : ""} onClick={() => setChecklist((old) => ({ ...old, [key]: value }))}>{text}</button>
-                  ))}
+        {permissions.finalTest ? (
+          <section className={styles.card}>
+            <div className={styles.sectionHead}><div><span>1</span><div><h2>Test finale</h2><p>Segna PASS, FAIL o N/A. Un FAIL rimanda la pratica in lavorazione.</p></div></div>{latestTest ? <strong>{testLabel(latestTest.status)}</strong> : null}</div>
+            <div className={styles.checks}>
+              {CHECKS.map(([key, label]) => (
+                <div className={styles.checkRow} key={key}>
+                  <span>{label}</span>
+                  <div className={styles.segmented}>
+                    {[["PASS", "OK"], ["FAIL", "KO"], ["NA", "N/A"]].map(([value, text]) => (
+                      <button key={value} type="button" disabled={!canTest || saving} className={checklist[key] === value ? styles.selected : ""} onClick={() => setChecklist((old) => ({ ...old, [key]: value }))}>{text}</button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-          <label className={styles.field}>Note test<textarea disabled={!canTest} value={testNotes} onChange={(e) => setTestNotes(e.target.value)} placeholder="Esito prove, anomalie residue, test specifici..." /></label>
-          <div className={styles.actions}>
-            <button className={styles.secondary} disabled={!canTest || saving} onClick={saveTest}>Salva bozza</button>
-            <button className={styles.primary} disabled={!canTest || saving} onClick={completeTest}>Concludi test</button>
-            <button className={styles.ready} disabled={!canReady || saving} onClick={() => act("mark-ready", {}, "Pratica pronta per il ritiro.")}>Segna PRONTO</button>
-          </div>
-          {repair.finalTests?.length ? <div className={styles.history}>{repair.finalTests.map((test) => <div key={test.id}><strong>{testLabel(test.status)}</strong><span>{dateTime(test.completedAt || test.createdAt)} · {test.technicianName || test.createdBy || "CorSystem"}</span></div>)}</div> : null}
-        </section>
-
-        <section className={styles.card}>
-          <div className={styles.sectionHead}><div><span>2</span><div><h2>Pagamenti</h2><p>Acconti e saldo restano movimenti separati e tracciati.</p></div></div></div>
-          {data.legacyDepositUsed ? <div className={styles.legacy}>È conteggiato l'acconto storico RepairNOTE di € {money(repair.deposit)}.</div> : null}
-          <div className={styles.paymentForm}>
-            <input type="number" min="0.01" step="0.01" placeholder="Importo €" value={payment.amount} onChange={(e) => setPayment({ ...payment, amount: e.target.value })} />
-            <select value={payment.method} onChange={(e) => setPayment({ ...payment, method: e.target.value })}><option value="cash">Contanti</option><option value="card">Carta / POS</option><option value="bank_transfer">Bonifico</option><option value="other">Altro</option></select>
-            <input placeholder="Nota facoltativa" value={payment.note} onChange={(e) => setPayment({ ...payment, note: e.target.value })} />
-            <button className={styles.primary} disabled={saving || !payment.amount} onClick={addPayment}>Registra pagamento</button>
-          </div>
-          <div className={styles.history}>
-            {repair.payments?.length ? repair.payments.map((item) => <div key={item.id}><strong>€ {money(item.amount)} · {paymentLabel(item.method)}</strong><span>{dateTime(item.paidAt)}{item.note ? ` · ${item.note}` : ""}</span></div>) : <div><span>Nessun pagamento registrato.</span></div>}
-          </div>
-        </section>
-
-        <section className={styles.card}>
-          <div className={styles.sectionHead}><div><span>3</span><div><h2>Consegna</h2><p>Chiude la pratica e congela importo, costo ricambi e margine finale.</p></div></div></div>
-          {closed ? (
-            <div className={styles.closed}><strong>Pratica consegnata</strong><span>{dateTime(repair.delivery?.deliveredAt || repair.deliveredAt)} · a {repair.delivery?.handedTo || "cliente"}</span><span>Margine finale: € {money(repair.finalMargin)}</span></div>
-          ) : (
-            <div className={styles.deliveryGrid}>
-              <label className={styles.field}>Consegnato a<input value={delivery.handedTo} onChange={(e) => setDelivery({ ...delivery, handedTo: e.target.value })} /></label>
-              <label className={styles.field}>Garanzia mesi<select value={delivery.warrantyMonths} onChange={(e) => setDelivery({ ...delivery, warrantyMonths: e.target.value })}><option value="0">Nessuna impostata</option><option value="3">3 mesi</option><option value="6">6 mesi</option><option value="12">12 mesi</option><option value="24">24 mesi</option></select></label>
-              {Number(financial.balance) > 0.009 ? <label className={styles.field}>Saldo aperto<select value={delivery.settlementMode} onChange={(e) => setDelivery({ ...delivery, settlementMode: e.target.value })}><option value="PAID">Non consegnare finché non saldato</option><option value="CREDIT">Consegna a credito, solo amministratore</option></select></label> : null}
-              <label className={`${styles.field} ${styles.full}`}>Note consegna<textarea value={delivery.note} onChange={(e) => setDelivery({ ...delivery, note: e.target.value })} placeholder="Condizioni di consegna o motivazione dell'eventuale credito" /></label>
-              <div className={`${styles.actions} ${styles.full}`}><button className={styles.deliveryButton} disabled={!canDeliver || saving || !delivery.handedTo} onClick={deliver}>Consegna e chiudi pratica</button></div>
+              ))}
             </div>
-          )}
-          {!canDeliver && !closed ? <div className={styles.hint}>La consegna si attiva quando la pratica è nello stato PRONTO.</div> : null}
-        </section>
+            <label className={styles.field}>Note test<textarea disabled={!canTest} value={testNotes} onChange={(e) => setTestNotes(e.target.value)} placeholder="Esito prove, anomalie residue, test specifici..." /></label>
+            <div className={styles.actions}>
+              <button className={styles.secondary} disabled={!canTest || saving} onClick={saveTest}>Salva bozza</button>
+              <button className={styles.primary} disabled={!canTest || saving} onClick={completeTest}>Concludi test</button>
+              <button className={styles.ready} disabled={!canReady || saving} onClick={() => act("mark-ready", {}, "Pratica pronta per il ritiro.")}>Segna PRONTO</button>
+            </div>
+            {repair.finalTests?.length ? <div className={styles.history}>{repair.finalTests.map((test) => <div key={test.id}><strong>{testLabel(test.status)}</strong><span>{dateTime(test.completedAt || test.createdAt)} · {test.technicianName || test.createdBy || "CorSystem"}</span></div>)}</div> : null}
+          </section>
+        ) : null}
+
+        {canPay && financial ? (
+          <section className={styles.card}>
+            <div className={styles.sectionHead}><div><span>2</span><div><h2>Pagamenti</h2><p>Acconti e saldo restano movimenti separati e tracciati.</p></div></div></div>
+            {data.legacyDepositUsed ? <div className={styles.legacy}>È conteggiato l'acconto storico RepairNOTE di € {money(repair.deposit)}.</div> : null}
+            <div className={styles.paymentForm}>
+              <input type="number" min="0.01" step="0.01" placeholder="Importo €" value={payment.amount} onChange={(e) => setPayment({ ...payment, amount: e.target.value })} />
+              <select value={payment.method} onChange={(e) => setPayment({ ...payment, method: e.target.value })}><option value="cash">Contanti</option><option value="card">Carta / POS</option><option value="bank_transfer">Bonifico</option><option value="other">Altro</option></select>
+              <input placeholder="Nota facoltativa" value={payment.note} onChange={(e) => setPayment({ ...payment, note: e.target.value })} />
+              <button className={styles.primary} disabled={saving || !payment.amount} onClick={addPayment}>Registra pagamento</button>
+            </div>
+            <div className={styles.history}>
+              {repair.payments?.length ? repair.payments.map((item) => <div key={item.id}><strong>€ {money(item.amount)} · {paymentLabel(item.method)}</strong><span>{dateTime(item.paidAt)}{item.note ? ` · ${item.note}` : ""}</span></div>) : <div><span>Nessun pagamento registrato.</span></div>}
+            </div>
+          </section>
+        ) : null}
+
+        {permissions.delivery && financial ? (
+          <section className={styles.card}>
+            <div className={styles.sectionHead}><div><span>3</span><div><h2>Consegna</h2><p>Chiude la pratica e congela importo, costo ricambi e margine finale.</p></div></div></div>
+            {closed ? (
+              <div className={styles.closed}><strong>Pratica consegnata</strong><span>{dateTime(repair.delivery?.deliveredAt || repair.deliveredAt)} · a {repair.delivery?.handedTo || "cliente"}</span><span>Margine finale: € {money(repair.finalMargin)}</span></div>
+            ) : (
+              <div className={styles.deliveryGrid}>
+                <label className={styles.field}>Consegnato a<input value={delivery.handedTo} onChange={(e) => setDelivery({ ...delivery, handedTo: e.target.value })} /></label>
+                <label className={styles.field}>Garanzia mesi<select value={delivery.warrantyMonths} onChange={(e) => setDelivery({ ...delivery, warrantyMonths: e.target.value })}><option value="0">Nessuna impostata</option><option value="3">3 mesi</option><option value="6">6 mesi</option><option value="12">12 mesi</option><option value="24">24 mesi</option></select></label>
+                {Number(financial.balance) > 0.009 ? <label className={styles.field}>Saldo aperto<select value={delivery.settlementMode} onChange={(e) => setDelivery({ ...delivery, settlementMode: e.target.value })}><option value="PAID">Non consegnare finché non saldato</option><option value="CREDIT">Consegna a credito, solo amministratore</option></select></label> : null}
+                <label className={`${styles.field} ${styles.full}`}>Note consegna<textarea value={delivery.note} onChange={(e) => setDelivery({ ...delivery, note: e.target.value })} placeholder="Condizioni di consegna o motivazione dell'eventuale credito" /></label>
+                <div className={`${styles.actions} ${styles.full}`}><button className={styles.deliveryButton} disabled={!canDeliver || saving || !delivery.handedTo} onClick={deliver}>Consegna e chiudi pratica</button></div>
+              </div>
+            )}
+            {!canDeliver && !closed ? <div className={styles.hint}>La consegna si attiva quando la pratica è nello stato PRONTO.</div> : null}
+          </section>
+        ) : null}
+
+        {!permissions.finalTest && !canPay && !permissions.delivery ? <div className={styles.hint}>Il tuo ruolo può consultare la pratica, ma non gestire collaudo, pagamenti o consegna.</div> : null}
       </div>
     </main>
   );
