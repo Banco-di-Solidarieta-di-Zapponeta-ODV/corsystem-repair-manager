@@ -33,6 +33,7 @@ export default function IntakeQuickLink() {
             <a href={`/ricevuta/${encodeURIComponent(state.repairId)}?format=a4`} target="_blank" rel="noreferrer">A4</a>
             <a href={`/ricevuta/${encodeURIComponent(state.repairId)}?format=thermal`} target="_blank" rel="noreferrer">80 mm</a>
           </div>
+          <a className={styles.closeLink} href={`/chiusura/${encodeURIComponent(state.repairId)}`} aria-label="Apri test finale pagamento e consegna">Test / Consegna</a>
           <a className={styles.partsLink} href={`/magazzino/pratica/${encodeURIComponent(state.repairId)}`} aria-label="Apri ricambi della pratica">Ricambi pratica</a>
           <a className={styles.workLink} href={`/lavorazione/${encodeURIComponent(state.repairId)}`} aria-label="Apri diagnosi e preventivo CorSystem">Diagnosi / Preventivo</a>
         </>
