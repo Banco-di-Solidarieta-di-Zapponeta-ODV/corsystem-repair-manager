@@ -117,22 +117,35 @@ async function moveStock(input = {}, staff) {
     const part = await tx.part.findUnique({ where: { id: partId } });
     if (!part) throwHttpError(404, "Ricambio non trovato");
 
+    const reserved = await tx.repairPart.aggregate({
+      where: { partId, status: "RESERVED", qtyReserved: { gt: 0 } },
+      _sum: { qtyReserved: true }
+    });
+    const reservedQty = Number(reserved._sum.qtyReserved || 0);
+    const physicalStock = Number(part.stockQty || 0);
+
     let delta = 0;
-    let stockAfter = Number(part.stockQty || 0);
+    let stockAfter = physicalStock;
     const unitCost = nonNegativeMoney(input.unitCost);
 
     if (type === "ADJUSTMENT") {
       const targetStock = nonNegativeQty(input.targetStock);
-      delta = roundQty(targetStock - Number(part.stockQty || 0));
+      if (targetStock < reservedQty) {
+        throwHttpError(409, `Rettifica non consentita: ${reservedQty} pezzi sono già prenotati per riparazioni`);
+      }
+      delta = roundQty(targetStock - physicalStock);
       stockAfter = targetStock;
       await tx.part.update({ where: { id: partId }, data: { stockQty: targetStock } });
     } else {
       const qty = positiveQty(input.quantity);
       delta = type === "ISSUE" ? -qty : qty;
-      if (delta < 0 && Number(part.stockQty || 0) < qty) {
-        throwHttpError(409, `Giacenza insufficiente: disponibili ${Number(part.stockQty || 0)}`);
+      if (delta < 0) {
+        const freeStock = Math.max(0, physicalStock - reservedQty);
+        if (qty > freeStock) {
+          throwHttpError(409, `Scarico non consentito: disponibili ${freeStock}, mentre ${reservedQty} sono prenotati`);
+        }
       }
-      stockAfter = roundQty(Number(part.stockQty || 0) + delta);
+      stockAfter = roundQty(physicalStock + delta);
       await tx.part.update({
         where: { id: partId },
         data: {
@@ -154,7 +167,7 @@ async function moveStock(input = {}, staff) {
         repairId,
         type,
         quantity: delta,
-        stockBefore: Number(part.stockQty || 0),
+        stockBefore: physicalStock,
         stockAfter,
         unitCost,
         reference: String(input.reference || "").trim().slice(0, 191),
@@ -163,7 +176,7 @@ async function moveStock(input = {}, staff) {
       }
     });
 
-    return { movement, stockQty: stockAfter };
+    return { movement, stockQty: stockAfter, reservedQty };
   });
 }
 
