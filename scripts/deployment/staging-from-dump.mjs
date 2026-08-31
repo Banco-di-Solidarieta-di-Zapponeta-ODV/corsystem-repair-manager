@@ -1,4 +1,5 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, createReadStream, writeFileSync, mkdirSync } from "node:fs";
+import { createInterface } from "node:readline";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import {
@@ -35,17 +36,36 @@ if (process.env.CORSYSTEM_STAGING_IMPORT_CONFIRM !== expectedConfirmation) {
   process.exit(1);
 }
 
-const preview = readFileSync(dumpPath, { encoding: "utf8" });
 const forbidden = [
   /\bCREATE\s+DATABASE\b/i,
   /\bDROP\s+DATABASE\b/i,
-  /^\s*USE\s+[`'\"]?/im
+  /^\s*USE\s+[`'\"]?/i
 ];
-for (const pattern of forbidden) {
-  if (pattern.test(preview)) {
-    console.error(`✗ Dump rifiutato: contiene istruzione non ammessa (${pattern}). Esporta il solo database senza CREATE/DROP DATABASE o USE.`);
-    process.exit(1);
+
+async function assertDumpIsDatabaseScoped() {
+  const input = createReadStream(dumpPath, { encoding: "utf8" });
+  const rl = createInterface({ input, crlfDelay: Infinity });
+  let lineNumber = 0;
+  for await (const line of rl) {
+    lineNumber += 1;
+    for (const pattern of forbidden) {
+      if (pattern.test(line)) {
+        rl.close();
+        input.destroy();
+        throw new Error(
+          `Dump rifiutato alla riga ${lineNumber}: contiene istruzione non ammessa (${pattern}). ` +
+          "Esporta il solo database senza CREATE/DROP DATABASE o USE."
+        );
+      }
+    }
   }
+}
+
+try {
+  await assertDumpIsDatabaseScoped();
+} catch (error) {
+  console.error(`✗ ${error.message}`);
+  process.exit(1);
 }
 
 const dumpSha256 = await sha256File(dumpPath);
