@@ -1,0 +1,8 @@
+-- RepairNOTE legacy baseline.
+--
+-- Questa migrazione rappresenta lo schema RepairNOTE già esistente prima
+-- dell'introduzione delle migrazioni CorSystem. Non deve creare o modificare
+-- tabelle: sui database legacy viene marcata come APPLIED tramite
+-- `prisma migrate resolve` dopo un preflight che verifica lo schema originale.
+--
+-- Le migrazioni CorSystem successive restano additive e partono da qui.
