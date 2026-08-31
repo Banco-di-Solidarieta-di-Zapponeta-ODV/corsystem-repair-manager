@@ -196,6 +196,8 @@ model Repair {
   ticketSort          BigInt       @default(0)
   client              Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
   device              Device?      @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  diagnosis           Diagnosis?
+  quotes              Quote[]
   items               RepairItem[]
   payments            Payment[]
   createdAt           DateTime     @default(now())
@@ -210,6 +212,79 @@ model Repair {
   @@index([createdAt])
   @@index([ticketSort])
   @@fulltext([searchText])
+}
+
+model Diagnosis {
+  id              String   @id @default(cuid())
+  repairId        String   @unique
+  status          String   @default("DRAFT")
+  technicianId    String   @default("")
+  technicianName  String   @default("")
+  findings        String   @db.Text
+  rootCause       String   @db.Text
+  proposedWork    String   @db.Text
+  partsNeeded     String   @db.Text
+  testsPerformed  String   @db.Text
+  riskNotes       String   @db.Text
+  customerSummary String   @db.Text
+  createdBy       String   @default("")
+  completedAt     DateTime?
+  repair          Repair   @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status])
+  @@index([technicianId])
+}
+
+model Quote {
+  id               String      @id @default(cuid())
+  repairId         String
+  version          Int
+  status           String      @default("DRAFT")
+  publicToken      String      @unique @default(cuid())
+  title            String      @default("")
+  customerMessage  String      @db.Text
+  internalNote     String      @db.Text
+  subtotal         Decimal     @default(0) @db.Decimal(12, 2)
+  discountAmount   Decimal     @default(0) @db.Decimal(12, 2)
+  total            Decimal     @default(0) @db.Decimal(12, 2)
+  estimatedDays    Int?
+  validUntil       DateTime?
+  sentAt           DateTime?
+  respondedAt      DateTime?
+  customerResponse String      @default("")
+  customerNote     String      @db.Text
+  createdBy        String      @default("")
+  supersededAt     DateTime?
+  repair           Repair      @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  items            QuoteItem[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@unique([repairId, version])
+  @@index([repairId])
+  @@index([status])
+  @@index([validUntil])
+}
+
+model QuoteItem {
+  id          String   @id @default(cuid())
+  quoteId     String
+  type        String   @default("service")
+  description String   @db.Text
+  qty         Decimal  @default(1) @db.Decimal(12, 3)
+  unitPrice   Decimal  @default(0) @db.Decimal(12, 2)
+  unitCost    Decimal  @default(0) @db.Decimal(12, 2)
+  lineTotal   Decimal  @default(0) @db.Decimal(12, 2)
+  lineCost    Decimal  @default(0) @db.Decimal(12, 2)
+  sortOrder   Int      @default(0)
+  quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([quoteId])
+  @@index([type])
 }
 
 model RepairItem {
