@@ -1,5 +1,6 @@
-import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
+import { authErrorResponse, requireCapability } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { CAPABILITIES } from "@/features/access/roles";
 import {
   STOCK_MOVEMENT_TYPES,
   normalizePartInput,
@@ -11,7 +12,7 @@ import {
 
 export async function GET() {
   try {
-    await requireAnyPageAccess(["repairs"]);
+    await requireCapability(CAPABILITIES.INVENTORY_VIEW);
     const [parts, suppliers, recentMovements, reservations] = await Promise.all([
       prisma.part.findMany({
         orderBy: [{ active: "desc" }, { defaultName: "asc" }],
@@ -54,7 +55,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const staff = await requireAnyPageAccess(["repairs"]);
+    const staff = await requireCapability(CAPABILITIES.INVENTORY_MANAGE);
     const body = await request.json();
     const action = String(body?.action || "").trim();
 
@@ -95,13 +96,7 @@ async function savePart(input = {}) {
   const part = id
     ? await prisma.part.update({ where: { id }, data })
     : await prisma.part.create({
-        data: {
-          ...data,
-          zh: "",
-          es: "",
-          sortOrder: 0,
-          stockQty: 0
-        }
+        data: { ...data, zh: "", es: "", sortOrder: 0, stockQty: 0 }
       });
 
   return { part };
