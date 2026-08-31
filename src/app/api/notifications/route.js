@@ -1,4 +1,5 @@
-import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
+import { authErrorResponse, requireCapability } from "@/lib/auth";
+import { CAPABILITIES } from "@/features/access/roles";
 import {
   dispatchNotification,
   dispatchQueuedNotifications,
@@ -7,7 +8,7 @@ import {
 
 export async function GET(request) {
   try {
-    await requireAnyPageAccess(["repairs", "settings"]);
+    await requireCapability(CAPABILITIES.NOTIFICATIONS_VIEW);
     const url = new URL(request.url);
     return Response.json(await notificationDashboard(url.searchParams.get("limit") || 100));
   } catch (error) {
@@ -17,7 +18,7 @@ export async function GET(request) {
 
 export async function POST(request) {
   try {
-    const staff = await requireAnyPageAccess(["repairs", "settings"]);
+    const staff = await requireCapability(CAPABILITIES.NOTIFICATIONS_MANAGE);
     const body = await request.json();
     const action = String(body?.action || "").trim();
 
