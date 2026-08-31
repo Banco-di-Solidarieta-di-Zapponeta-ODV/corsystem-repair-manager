@@ -1,0 +1,47 @@
+name: CorSystem CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+  push:
+    branches:
+      - develop
+      - feature/client-device-intake
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Prisma validate and Next build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: mysql://corsystem:ci-only@127.0.0.1:3306/corsystem_ci
+      REPAIRNOTE_ADMIN_USERNAME: admin
+      REPAIRNOTE_ADMIN_PASSWORD: ci-only-not-for-production
+      REPAIRNOTE_COOKIE_SECURE: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build Next.js application
+        run: npm run build
