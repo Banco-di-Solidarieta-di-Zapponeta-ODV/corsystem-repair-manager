@@ -68,13 +68,13 @@ export async function POST(request, { params }) {
 
     if (action === "request") {
       const result = await requestPart(repairId, body, staff);
-      result.notification = await waitingPartNotification(repairId, result.repairPart?.id, "request");
+      result.notification = await waitingPartNotification(repairId, result.repairPart?.id);
       return Response.json(result);
     }
     if (action === "reserve") return Response.json(await reservePart(repairId, body.repairPartId, staff));
     if (action === "order") {
       const result = await orderPart(repairId, body, staff);
-      result.notification = await waitingPartNotification(repairId, result.repairPart?.id, "order");
+      result.notification = await waitingPartNotification(repairId, result.repairPart?.id);
       return Response.json(result);
     }
     if (action === "receive") return Response.json(await receivePart(repairId, body, staff));
@@ -88,9 +88,9 @@ export async function POST(request, { params }) {
   }
 }
 
-async function waitingPartNotification(repairId, repairPartId, phase) {
+async function waitingPartNotification(repairId, repairPartId) {
   return notifyRepairEvent(repairId, "WAITING_PART", {
-    dedupeSuffix: `${phase}:${repairPartId || "part"}`
+    dedupeSuffix: repairPartId || "part"
   }).catch((error) => ({ error: String(error?.message || error) }));
 }
 
