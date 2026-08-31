@@ -109,6 +109,26 @@ model Service {
   updatedAt   DateTime @updatedAt
 }
 
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String
+  vatNumber String   @default("")
+  taxCode   String   @default("")
+  email     String   @default("")
+  phone     String   @default("")
+  address   String   @db.Text
+  website   String   @default("")
+  notes     String   @db.Text
+  active    Boolean  @default(true)
+  parts     Part[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([vatNumber])
+  @@index([active])
+}
+
 model Part {
   id          String   @id @default(cuid())
   defaultName String   @db.Text
@@ -117,8 +137,25 @@ model Part {
   es          String   @db.Text
   price       Decimal  @default(0) @db.Decimal(12, 2)
   sortOrder   Int      @default(0)
+  sku         String?  @unique @db.VarChar(64)
+  barcode     String?  @unique @db.VarChar(128)
+  supplierId  String?
+  cost        Decimal  @default(0) @db.Decimal(12, 2)
+  stockQty    Decimal  @default(0) @db.Decimal(12, 3)
+  minStock    Decimal  @default(0) @db.Decimal(12, 3)
+  location    String   @default("")
+  active      Boolean  @default(true)
+  supplier    Supplier? @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  movements   StockMovement[]
+  repairParts RepairPart[]
+  quoteItems  QuoteItem[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([supplierId])
+  @@index([category])
+  @@index([active])
+  @@index([stockQty])
 }
 
 model Technician {
@@ -200,6 +237,8 @@ model Repair {
   quotes              Quote[]
   items               RepairItem[]
   payments            Payment[]
+  repairParts         RepairPart[]
+  stockMovements      StockMovement[]
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
@@ -271,6 +310,7 @@ model Quote {
 model QuoteItem {
   id          String   @id @default(cuid())
   quoteId     String
+  partId      String?
   type        String   @default("service")
   description String   @db.Text
   qty         Decimal  @default(1) @db.Decimal(12, 3)
@@ -280,11 +320,64 @@ model QuoteItem {
   lineCost    Decimal  @default(0) @db.Decimal(12, 2)
   sortOrder   Int      @default(0)
   quote       Quote    @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  part        Part?    @relation(fields: [partId], references: [id], onDelete: SetNull)
+  repairParts RepairPart[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([quoteId])
+  @@index([partId])
   @@index([type])
+}
+
+model RepairPart {
+  id               String    @id @default(cuid())
+  repairId         String
+  partId           String
+  quoteItemId      String?
+  status           String    @default("REQUESTED")
+  qtyRequested     Decimal   @default(1) @db.Decimal(12, 3)
+  qtyReserved      Decimal   @default(0) @db.Decimal(12, 3)
+  qtyUsed          Decimal   @default(0) @db.Decimal(12, 3)
+  unitCostSnapshot Decimal   @default(0) @db.Decimal(12, 2)
+  orderReference   String    @default("")
+  expectedAt       DateTime?
+  receivedAt       DateTime?
+  notes            String    @db.Text
+  repair           Repair    @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  part             Part      @relation(fields: [partId], references: [id], onDelete: Restrict)
+  quoteItem        QuoteItem? @relation(fields: [quoteItemId], references: [id], onDelete: SetNull)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([repairId])
+  @@index([partId])
+  @@index([quoteItemId])
+  @@index([status])
+  @@index([expectedAt])
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  partId      String
+  repairId    String?
+  type        String
+  quantity    Decimal  @db.Decimal(12, 3)
+  stockBefore Decimal  @db.Decimal(12, 3)
+  stockAfter  Decimal  @db.Decimal(12, 3)
+  unitCost    Decimal  @default(0) @db.Decimal(12, 2)
+  reference   String   @default("")
+  note        String   @db.Text
+  createdBy   String   @default("")
+  happenedAt  DateTime @default(now())
+  part        Part     @relation(fields: [partId], references: [id], onDelete: Restrict)
+  repair      Repair?  @relation(fields: [repairId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([partId])
+  @@index([repairId])
+  @@index([type])
+  @@index([happenedAt])
 }
 
 model RepairItem {
