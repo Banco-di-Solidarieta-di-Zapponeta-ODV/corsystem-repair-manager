@@ -128,7 +128,7 @@ async function reservePart(repairId, repairPartId, staff) {
       _sum: { qtyReserved: true }
     });
     const available = Number(row.part.stockQty || 0) - Number(otherReservations._sum.qtyReserved || 0);
-    const needed = Number(row.qtyRequested || 0) - Number(row.qtyUsed || 0);
+    const needed = Math.max(0, Number(row.qtyRequested || 0) - Number(row.qtyUsed || 0));
     if (available < needed) throwHttpError(409, `Disponibilità insufficiente: liberi ${Math.max(0, available)}`);
 
     const updated = await tx.repairPart.update({
@@ -172,6 +172,8 @@ async function receivePart(repairId, body, staff) {
     const unitCost = nonNegativeMoney(body.unitCost || row.unitCostSnapshot || row.part.cost);
     const stockBefore = Number(row.part.stockQty || 0);
     const stockAfter = roundQty(stockBefore + qty);
+    const remaining = Math.max(0, Number(row.qtyRequested || 0) - Number(row.qtyUsed || 0));
+    const qtyReserved = Math.min(remaining, roundQty(Number(row.qtyReserved || 0) + qty));
 
     await tx.part.update({
       where: { id: row.partId },
@@ -195,12 +197,14 @@ async function receivePart(repairId, body, staff) {
     const updated = await tx.repairPart.update({
       where: { id: row.id },
       data: {
-        status: "RECEIVED",
+        status: "RESERVED",
+        qtyReserved,
         receivedAt: new Date(),
         unitCostSnapshot: unitCost
       }
     });
-    return { repairPart: updated, stockQty: stockAfter, repairStatus: repair.status };
+    const repairStatus = await syncRepairAvailabilityStatus(tx, repair, staff);
+    return { repairPart: updated, stockQty: stockAfter, repairStatus };
   });
 }
 
@@ -209,11 +213,12 @@ async function usePart(repairId, body, staff) {
     const repair = await requireWorkableRepair(tx, repairId);
     const row = await tx.repairPart.findFirst({ where: { id: body.repairPartId, repairId }, include: { part: true } });
     if (!row) throwHttpError(404, "Richiesta ricambio non trovata");
-    if (!["RESERVED", "RECEIVED"].includes(row.status)) throwHttpError(409, "Prenota o ricevi il ricambio prima di utilizzarlo");
+    if (row.status !== "RESERVED") throwHttpError(409, "Prenota il ricambio prima di utilizzarlo");
 
-    const remaining = Number(row.qtyRequested || 0) - Number(row.qtyUsed || 0);
-    const qty = positiveQty(body.quantity || remaining);
+    const remaining = Math.max(0, Number(row.qtyRequested || 0) - Number(row.qtyUsed || 0));
+    const qty = positiveQty(body.quantity || Math.min(remaining, Number(row.qtyReserved || 0)));
     if (qty > remaining) throwHttpError(400, `Quantità superiore al residuo richiesto (${remaining})`);
+    if (qty > Number(row.qtyReserved || 0)) throwHttpError(409, `Quantità superiore a quella prenotata (${Number(row.qtyReserved || 0)})`);
     if (Number(row.part.stockQty || 0) < qty) throwHttpError(409, `Giacenza insufficiente: ${Number(row.part.stockQty || 0)}`);
 
     const stockBefore = Number(row.part.stockQty || 0);
@@ -245,9 +250,9 @@ async function usePart(repairId, body, staff) {
     const usedRows = await tx.repairPart.findMany({ where: { repairId, qtyUsed: { gt: 0 } } });
     const costAmount = usedRows.reduce((total, item) => total + Number(item.qtyUsed || 0) * Number(item.unitCostSnapshot || 0), 0);
     await tx.repair.update({ where: { id: repairId }, data: { costAmount: Math.round(costAmount * 100) / 100 } });
-    await setRepairStatus(tx, repair, "IN_LAVORAZIONE", "part-used", staff, { repairPartId: row.id, partId: row.partId });
+    const repairStatus = await syncRepairAvailabilityStatus(tx, repair, staff);
 
-    return { repairPart: updated, stockQty: stockAfter, repairStatus: "IN_LAVORAZIONE", costAmount };
+    return { repairPart: updated, stockQty: stockAfter, repairStatus, costAmount };
   });
 }
 
@@ -271,7 +276,7 @@ async function startRepair(repairId, staff) {
   return prisma.$transaction(async (tx) => {
     const repair = await requireWorkableRepair(tx, repairId);
     const active = await tx.repairPart.findMany({ where: { repairId, NOT: { status: "CANCELLED" } } });
-    const blocked = active.some((row) => !["RESERVED", "RECEIVED", "USED"].includes(row.status));
+    const blocked = active.some((row) => coverage(row) < Number(row.qtyRequested || 0));
     if (blocked) throwHttpError(409, "Ci sono ricambi ancora da ordinare o prenotare");
     await setRepairStatus(tx, repair, "IN_LAVORAZIONE", "repair-started", staff);
     return { repairStatus: "IN_LAVORAZIONE" };
@@ -284,11 +289,21 @@ async function syncRepairAvailabilityStatus(tx, repair, staff) {
     await setRepairStatus(tx, repair, "AUTORIZZATO", "parts-cleared", staff);
     return "AUTORIZZATO";
   }
-  if (rows.some((row) => row.status === "USED")) return repair.status === "IN_LAVORAZIONE" ? repair.status : "IN_LAVORAZIONE";
-  const allReady = rows.every((row) => ["RESERVED", "RECEIVED"].includes(row.status));
-  const status = allReady ? "AUTORIZZATO" : "ATTESA_RICAMBIO";
-  if (repair.status !== status) await setRepairStatus(tx, repair, status, allReady ? "parts-ready" : "parts-waiting", staff);
+
+  const waiting = rows.some((row) => coverage(row) < Number(row.qtyRequested || 0));
+  if (waiting) {
+    if (repair.status !== "ATTESA_RICAMBIO") await setRepairStatus(tx, repair, "ATTESA_RICAMBIO", "parts-waiting", staff);
+    return "ATTESA_RICAMBIO";
+  }
+
+  const workStarted = rows.some((row) => Number(row.qtyUsed || 0) > 0);
+  const status = workStarted ? "IN_LAVORAZIONE" : "AUTORIZZATO";
+  if (repair.status !== status) await setRepairStatus(tx, repair, status, workStarted ? "repair-parts-in-use" : "parts-ready", staff);
   return status;
+}
+
+function coverage(row) {
+  return roundQty(Number(row.qtyReserved || 0) + Number(row.qtyUsed || 0));
 }
 
 async function setRepairStatus(tx, repair, status, type, staff, extra = {}) {
