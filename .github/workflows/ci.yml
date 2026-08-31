@@ -49,8 +49,8 @@ jobs:
       - name: Build Next.js application
         run: npm run build
 
-  device-migration:
-    name: Device migration and legacy backfill
+  migrations:
+    name: CorSystem migrations and legacy backfill
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -96,8 +96,14 @@ jobs:
       - name: Apply Device migration SQL
         run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831173000_add_devices/migration.sql
 
+      - name: Apply Diagnosis and Quote migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831183000_add_diagnosis_quotes/migration.sql
+
       - name: Generate current Prisma client
         run: npx prisma generate --schema=prisma/schema.prisma
 
       - name: Verify Device backfill
         run: node scripts/test-device-migration.mjs
+
+      - name: Verify Diagnosis and Quote backfill
+        run: node scripts/test-workflow-migration.mjs
