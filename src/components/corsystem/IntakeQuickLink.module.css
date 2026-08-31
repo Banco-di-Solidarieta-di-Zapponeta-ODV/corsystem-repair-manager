@@ -1,0 +1,40 @@
+.link {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 11px 17px;
+  border-radius: 999px;
+  background: #172033;
+  color: #fff;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .24);
+  border: 1px solid rgba(255, 255, 255, .14);
+}
+
+.link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 15px 34px rgba(15, 23, 42, .28);
+}
+
+.plus {
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .link {
+    right: 14px;
+    bottom: 14px;
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+}
