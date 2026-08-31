@@ -14,9 +14,9 @@ concurrency:
 
 jobs:
   deploy-rollback:
-    name: Legacy snapshot deploy verify rollback
+    name: Legacy snapshot deploy verify rollback and dump rehearsal
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
 
     services:
       mysql:
@@ -92,3 +92,15 @@ jobs:
 
       - name: Verify legacy state after rollback
         run: npm run deploy:preflight -- --expect=legacy
+
+      - name: Rehearse guarded import from a RepairNOTE SQL dump
+        env:
+          CORSYSTEM_STAGING_IMPORT_CONFIRM: REPLACE-STAGING-corsystem_deploy_ci
+        run: |
+          SNAPSHOT="$(ls -1t /tmp/corsystem-deploy-backups/*.sql | head -n 1)"
+          npm run staging:from-dump -- --dump="$SNAPSHOT" --report=/tmp/staging-real-dump-report.json
+          test -s /tmp/staging-real-dump-report.json
+          cat /tmp/staging-real-dump-report.json
+
+      - name: Verify CorSystem after dump rehearsal
+        run: npm run deploy:verify
