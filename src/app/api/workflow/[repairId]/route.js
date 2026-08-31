@@ -91,10 +91,17 @@ export async function PUT(request, { params }) {
       });
 
       const nextStatus = diagnosisInput.status === "FINAL" ? "ATTESA_PREVENTIVO" : "IN_DIAGNOSI";
-      if (EARLY_REPAIR_STATUSES.has(repair.status)) {
+      const statusPatch = EARLY_REPAIR_STATUSES.has(repair.status)
+        ? repairStatusPatch(repair, nextStatus, diagnosisInput.status === "FINAL" ? "diagnosis-finalized" : "diagnosis-saved", staff)
+        : {};
+      const technicianPatch = diagnosisInput.technicianId
+        ? { technicianId: diagnosisInput.technicianId, technicianName }
+        : {};
+
+      if (Object.keys(statusPatch).length || Object.keys(technicianPatch).length) {
         await tx.repair.update({
           where: { id: repairId },
-          data: repairStatusPatch(repair, nextStatus, diagnosisInput.status === "FINAL" ? "diagnosis-finalized" : "diagnosis-saved", staff)
+          data: { ...statusPatch, ...technicianPatch }
         });
       }
 
