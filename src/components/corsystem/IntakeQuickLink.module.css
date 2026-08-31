@@ -14,7 +14,8 @@
 .workLink,
 .warehouseLink,
 .partsLink,
-.closeLink {
+.closeLink,
+.notificationLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -38,7 +39,8 @@
 .workLink,
 .warehouseLink,
 .partsLink,
-.closeLink {
+.closeLink,
+.notificationLink {
   min-height: 40px;
   padding: 8px 15px;
   background: rgba(255, 255, 255, .97);
@@ -69,12 +71,19 @@
   border-color: #fed7aa;
 }
 
+.notificationLink {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+
 .link:hover,
 .deviceLink:hover,
 .workLink:hover,
 .warehouseLink:hover,
 .partsLink:hover,
-.closeLink:hover {
+.closeLink:hover,
+.notificationLink:hover {
   transform: translateY(-1px);
   box-shadow: 0 15px 34px rgba(15, 23, 42, .22);
 }
@@ -126,7 +135,8 @@
   .workLink,
   .warehouseLink,
   .partsLink,
-  .closeLink {
+  .closeLink,
+  .notificationLink {
     min-height: 38px;
     padding: 8px 13px;
   }
