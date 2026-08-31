@@ -1,8 +1,9 @@
 import crypto from "node:crypto";
-import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
+import { authErrorResponse, requireCapability } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildRepairSearchText } from "@/lib/search-text";
 import { getRevisionPatch } from "@/lib/data-store";
+import { CAPABILITIES } from "@/features/access/roles";
 import { notifyRepairEvent } from "@/features/notifications/server";
 import {
   DEFAULT_DOCUMENT_TYPE,
@@ -18,7 +19,7 @@ const MAX_TICKET_ATTEMPTS = 3;
 
 export async function GET() {
   try {
-    await requireAnyPageAccess(["repairs", "clients"]);
+    await requireCapability(CAPABILITIES.INTAKE_CREATE);
     const [clients, technicians] = await Promise.all([
       prisma.client.findMany({ orderBy: [{ updatedAt: "desc" }, { name: "asc" }] }),
       prisma.technician.findMany({ where: { active: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] })
@@ -38,7 +39,7 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const staff = await requireAnyPageAccess(["repairs", "clients"]);
+    const staff = await requireCapability(CAPABILITIES.INTAKE_CREATE);
     const body = await request.json();
     validateRequest(body);
 
@@ -136,14 +137,12 @@ async function createIntakeTransaction(tx, body, staff) {
       warrantyDiagnosis: "",
       warrantyResolution: "",
       warrantyChargeable: false,
-      statusHistory: [
-        {
-          status: "预定",
-          type: "intake-created",
-          at: now.toISOString(),
-          by: staff?.name || staff?.username || "CorSystem"
-        }
-      ],
+      statusHistory: [{
+        status: "预定",
+        type: "intake-created",
+        at: now.toISOString(),
+        by: staff?.name || staff?.username || "CorSystem"
+      }],
       notificationLog: [],
       searchText,
       ticketSort
@@ -198,9 +197,7 @@ async function resolveDevice(tx, body, clientId) {
   const color = String(input.color || "").trim();
   const notes = String(input.notes || "").trim();
 
-  if (!brand && !model && !imei && !serialNumber) {
-    throwHttpError(400, "Inserisci almeno marca/modello, IMEI o numero seriale del dispositivo");
-  }
+  if (!brand && !model && !imei && !serialNumber) throwHttpError(400, "Inserisci almeno marca/modello, IMEI o numero seriale del dispositivo");
 
   if (imei) {
     const sameImei = await tx.device.findFirst({ where: { clientId, imei } });
@@ -237,10 +234,7 @@ async function nextCorSystemTicket(tx) {
   const previous = Number(String(latest?.ticket || "").slice(prefix.length)) || 0;
   const sequence = previous + 1;
   const ticket = `${prefix}${String(sequence).padStart(5, "0")}`;
-  return {
-    ticket,
-    ticketSort: BigInt(`${year}${String(sequence).padStart(5, "0")}`)
-  };
+  return { ticket, ticketSort: BigInt(`${year}${String(sequence).padStart(5, "0")}`) };
 }
 
 function serializeIntakeProperties(body, now = new Date()) {
