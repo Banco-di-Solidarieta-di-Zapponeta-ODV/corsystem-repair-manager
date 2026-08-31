@@ -52,7 +52,9 @@ async function sendEmail(notification) {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
+      "User-Agent": "CorSystem-Repair-Manager/0.1",
+      "Idempotency-Key": String(notification.dedupeKey || notification.id).slice(0, 256)
     },
     body: JSON.stringify({
       from: process.env.RESEND_FROM,
