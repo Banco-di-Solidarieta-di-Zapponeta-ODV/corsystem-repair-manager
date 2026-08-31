@@ -2,6 +2,10 @@ INSERT INTO `Client` (`id`, `name`, `docType`, `identity`, `email`, `phone`, `ad
 ('client-imei', 'Cliente IMEI', 'CF', 'TESTIMEI', 'imei@example.test', '3200000001', '', '', 'VIP', NOW(3), NOW(3)),
 ('client-legacy', 'Cliente Legacy', 'CF', 'TESTLEGACY', 'legacy@example.test', '3200000002', '', '', 'VIP', NOW(3), NOW(3));
 
+INSERT INTO `Part` (`id`, `defaultName`, `category`, `zh`, `es`, `price`, `sortOrder`, `createdAt`, `updatedAt`) VALUES
+('legacy-part-display', 'Display OLED Samsung Galaxy S25', 'Display', '', 'Pantalla OLED Samsung Galaxy S25', 129.00, 1, NOW(3), NOW(3)),
+('legacy-part-battery', 'Batteria Samsung Galaxy S25', 'Batterie', '', 'Bateria Samsung Galaxy S25', 79.00, 2, NOW(3), NOW(3));
+
 INSERT INTO `Repair` (
   `id`, `ticket`, `clientId`, `brand`, `model`, `properties`, `imei`, `issue`, `internalNote`,
   `passwordType`, `passwordText`, `passwordPattern`, `status`, `repairTime`, `warrantyStart`,
