@@ -37,8 +37,15 @@ jobs:
           node-version: 24
           cache: npm
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install dependencies and refresh lock
+        run: npm install
+
+      - name: Upload refreshed package lock
+        uses: actions/upload-artifact@v4
+        with:
+          name: package-lock-security-refresh
+          path: package-lock.json
+          if-no-files-found: error
 
       - name: Audit dependencies
         run: npm audit --audit-level=high
@@ -85,7 +92,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Validate legacy schema fixture
         run: npx prisma validate --schema=prisma/schema.legacy.prisma
@@ -172,7 +179,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Create clean current database
         run: npx prisma db push --skip-generate
