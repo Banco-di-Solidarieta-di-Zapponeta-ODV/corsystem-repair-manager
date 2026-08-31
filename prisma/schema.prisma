@@ -45,12 +45,35 @@ model Client {
   address   String   @db.Text
   comment   String   @db.Text
   level     String   @default("VIP")
+  devices   Device[]
   repairs   Repair[]
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([name])
   @@index([phone])
+}
+
+model Device {
+  id           String   @id @default(cuid())
+  clientId     String
+  type         String   @default("Altro")
+  brand        String   @default("")
+  model        String   @default("")
+  imei         String   @default("")
+  serialNumber String   @default("")
+  color        String   @default("")
+  notes        String   @db.Text
+  fingerprint  String   @db.VarChar(64)
+  client       Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  repairs      Repair[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([clientId, fingerprint])
+  @@index([clientId])
+  @@index([imei])
+  @@index([serialNumber])
 }
 
 model Brand {
@@ -133,58 +156,59 @@ model Attribute {
 }
 
 model Repair {
-  id              String       @id @default(cuid())
-  ticket          String       @unique
-  clientId        String
-  brand           String       @default("")
-  model           String       @default("")
-  properties      String       @db.Text
-  imei            String       @default("")
-  issue           String       @db.Text
-  internalNote    String       @db.Text
-  passwordType    String       @default("")
-  passwordText    String       @default("")
-  passwordPattern Json
-  status          String       @default("预定")
-  repairTime      String       @default("")
-  warrantyStart   String       @default("")
-  technicianId    String       @default("")
-  technicianName  String       @default("")
-  budget          Decimal      @default(0) @db.Decimal(12, 2)
-  deposit         Decimal      @default(0) @db.Decimal(12, 2)
-  paymentMethod   String       @default("none")
-  discountAmount  Decimal      @default(0) @db.Decimal(12, 2)
-  costAmount      Decimal      @default(0) @db.Decimal(12, 2)
-  frontPhoto      String       @db.LongText
-  backPhoto       String       @db.LongText
-  signatureDataUrl String      @db.LongText
-  signedAt        String       @default("")
-  publicToken     String       @unique @default(cuid())
-  orderType       String       @default("repair")
-  sourceRepairId  String       @default("")
-  warrantyReason  String       @db.Text
-  warrantyDiagnosis String     @db.Text
-  warrantyResolution String    @db.Text
-  warrantyChargeable Boolean   @default(false)
-  statusHistory   Json
-  notificationLog Json
-  searchText      String       @db.Text
-  ticketSort      BigInt       @default(0)
-  client          Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
-  items           RepairItem[]
-  payments        Payment[]
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  ticket              String       @unique
+  clientId            String
+  deviceId            String?
+  brand               String       @default("")
+  model               String       @default("")
+  properties          String       @db.Text
+  imei                String       @default("")
+  issue               String       @db.Text
+  internalNote        String       @db.Text
+  passwordType        String       @default("")
+  passwordText        String       @default("")
+  passwordPattern     Json
+  status              String       @default("预定")
+  repairTime          String       @default("")
+  warrantyStart       String       @default("")
+  technicianId        String       @default("")
+  technicianName      String       @default("")
+  budget              Decimal      @default(0) @db.Decimal(12, 2)
+  deposit             Decimal      @default(0) @db.Decimal(12, 2)
+  paymentMethod       String       @default("none")
+  discountAmount      Decimal      @default(0) @db.Decimal(12, 2)
+  costAmount          Decimal      @default(0) @db.Decimal(12, 2)
+  frontPhoto          String       @db.LongText
+  backPhoto           String       @db.LongText
+  signatureDataUrl    String       @db.LongText
+  signedAt            String       @default("")
+  publicToken         String       @unique @default(cuid())
+  orderType           String       @default("repair")
+  sourceRepairId      String       @default("")
+  warrantyReason      String       @db.Text
+  warrantyDiagnosis   String       @db.Text
+  warrantyResolution  String       @db.Text
+  warrantyChargeable  Boolean      @default(false)
+  statusHistory       Json
+  notificationLog     Json
+  searchText          String       @db.Text
+  ticketSort          BigInt       @default(0)
+  client              Client       @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  device              Device?      @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  items               RepairItem[]
+  payments            Payment[]
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   @@index([clientId])
+  @@index([deviceId])
   @@index([orderType])
   @@index([sourceRepairId])
   @@index([status])
   @@index([repairTime])
   @@index([createdAt])
   @@index([ticketSort])
-  // 当前服务端搜索用 searchText 的子串匹配（LIKE，与界面“包含”语义一致）。
-  // 保留 FULLTEXT 以备将来切换到 ngram 全文检索（数据量更大时）；切换需改用 MATCH...AGAINST。
   @@fulltext([searchText])
 }
 
