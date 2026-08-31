@@ -247,6 +247,7 @@ model Repair {
   stockMovements      StockMovement[]
   finalTests          RepairTest[]
   delivery            DeliveryRecord?
+  notifications       Notification[]
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
@@ -429,6 +430,35 @@ model DeliveryRecord {
 
   @@index([deliveredAt])
   @@index([settlementMode])
+}
+
+model Notification {
+  id            String   @id @default(cuid())
+  repairId      String
+  event         String
+  channel       String
+  status        String   @default("QUEUED")
+  provider      String   @default("")
+  recipient     String
+  subject       String   @default("")
+  body          String   @db.Text
+  externalId    String   @default("")
+  attempts      Int      @default(0)
+  lastError     String   @db.Text
+  scheduledAt   DateTime @default(now())
+  sentAt        DateTime?
+  lastAttemptAt DateTime?
+  dedupeKey     String   @unique @db.VarChar(191)
+  repair        Repair   @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([repairId])
+  @@index([event])
+  @@index([channel])
+  @@index([status])
+  @@index([scheduledAt])
+  @@index([createdAt])
 }
 
 model RepairItem {
