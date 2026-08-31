@@ -4,6 +4,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./dashboard.module.css";
 
 const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
+const roleLabels = {
+  ADMIN: "Amministratore",
+  FRONT_OFFICE: "Front Office",
+  TECHNICIAN: "Tecnico",
+  INVENTORY: "Magazzino",
+  CUSTOM: "Profilo personalizzato"
+};
 
 export default function DashboardClient() {
   const [data, setData] = useState(null);
@@ -55,15 +62,16 @@ export default function DashboardClient() {
   }
 
   const kpi = data?.kpis || {};
-  const financial = data?.financial30d || {};
+  const financial = data?.financial30d;
+  const visibility = data?.visibility || {};
 
   return (
     <main className={styles.shell}>
       <header className={styles.header}>
         <div>
-          <div className={styles.eyebrow}>CorSystem Repair Manager</div>
+          <div className={styles.eyebrow}>CorSystem Repair Manager · {roleLabels[data?.role] || data?.role || "Operatore"}</div>
           <h1>Dashboard operativo</h1>
-          <p>Stato del laboratorio, criticità, carico tecnici e andamento economico.</p>
+          <p>Stato del laboratorio, criticità e carico tecnici{visibility.finance ? ", con andamento economico" : ""}.</p>
         </div>
         <div className={styles.headerActions}>
           <span className={styles.updated}>Aggiornato {lastUpdate}</span>
@@ -81,9 +89,9 @@ export default function DashboardClient() {
         <Kpi title="Attesa ricambio" value={kpi.waitingPart || 0} note="Pratiche bloccate dai materiali" tone={kpi.waitingPart ? "warning" : "normal"} />
         <Kpi title="Pronti" value={kpi.ready || 0} note={`${kpi.overdueReady || 0} da oltre 3 giorni`} tone={kpi.overdueReady ? "danger" : "good"} />
         <Kpi title="Senza tecnico" value={kpi.unassigned || 0} note="Pratiche da assegnare" tone={kpi.unassigned ? "warning" : "good"} />
-        <Kpi title="Scorte basse" value={kpi.lowStock || 0} note="Articoli alla soglia minima" tone={kpi.lowStock ? "warning" : "good"} href="/magazzino" />
-        <Kpi title="Notifiche fallite" value={kpi.failedNotifications || 0} note="Messaggi da verificare" tone={kpi.failedNotifications ? "danger" : "good"} href="/notifiche" />
-        <Kpi title="Incassi 30 gg" value={euro.format(financial.payments || 0)} note={`${financial.paymentMovements || 0} movimenti`} />
+        {visibility.inventory ? <Kpi title="Scorte basse" value={kpi.lowStock || 0} note="Articoli alla soglia minima" tone={kpi.lowStock ? "warning" : "good"} href="/magazzino" /> : null}
+        {visibility.notifications ? <Kpi title="Notifiche fallite" value={kpi.failedNotifications || 0} note="Messaggi da verificare" tone={kpi.failedNotifications ? "danger" : "good"} href="/notifiche" /> : null}
+        {visibility.finance && financial ? <Kpi title="Incassi 30 gg" value={euro.format(financial.payments || 0)} note={`${financial.paymentMovements || 0} movimenti`} /> : null}
       </section>
 
       <section className={styles.panel}>
@@ -117,10 +125,7 @@ export default function DashboardClient() {
                 <a className={styles.alertRow} key={item.id} href={repairActionHref(item)}>
                   <span className={`${styles.severity} ${item.severity >= 4 ? styles.severityHigh : item.severity >= 3 ? styles.severityMedium : styles.severityLow}`} />
                   <div className={styles.alertMain}>
-                    <div className={styles.alertTitle}>
-                      <strong>{item.ticket}</strong>
-                      <span>{item.clientName}</span>
-                    </div>
+                    <div className={styles.alertTitle}><strong>{item.ticket}</strong><span>{item.clientName}</span></div>
                     <div className={styles.alertMeta}>{item.device} · {item.technicianName}</div>
                   </div>
                   <div className={styles.alertReason}>{item.reason}</div>
@@ -156,60 +161,58 @@ export default function DashboardClient() {
         </section>
       </div>
 
-      <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <div>
-            <h2>Economia del laboratorio</h2>
-            <p>Ultimi 30 giorni, con tempo medio calcolato sulle consegne degli ultimi 90 giorni.</p>
-          </div>
-        </div>
-        <div className={styles.financeGrid}>
-          <Finance label="Incassi" value={euro.format(financial.payments || 0)} />
-          <Finance label="Valore consegnato" value={euro.format(financial.deliveredValue || 0)} sub={`${financial.deliveries || 0} consegne`} />
-          <Finance label="Costi registrati" value={euro.format(financial.deliveredCost || 0)} />
-          <Finance label="Margine" value={euro.format(financial.margin || 0)} />
-          <Finance label="Ticket medio" value={euro.format(financial.averageTicket || 0)} />
-          <Finance label="Tempo medio" value={formatTurnaround(financial.averageTurnaroundHours || 0)} sub="accettazione → consegna" />
-        </div>
-      </section>
-
-      <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <div>
-            <h2>Scorte da riordinare</h2>
-            <p>Ricambi alla soglia minima o sotto soglia.</p>
-          </div>
-          <a className={styles.textLink} href="/magazzino">Apri magazzino</a>
-        </div>
-        {(data?.lowStock || []).length ? (
-          <div className={styles.stockTable}>
-            <div className={`${styles.stockRow} ${styles.stockHead}`}>
-              <span>Ricambio</span><span>SKU</span><span>Giacenza</span><span>Minimo</span><span>Posizione / fornitore</span>
+      {visibility.finance && financial ? (
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <div>
+              <h2>Economia del laboratorio</h2>
+              <p>Ultimi 30 giorni, con tempo medio calcolato sulle consegne degli ultimi 90 giorni.</p>
             </div>
-            {data.lowStock.map((part) => (
-              <div className={styles.stockRow} key={part.id}>
-                <strong>{part.name}</strong>
-                <span>{part.sku || "—"}</span>
-                <span>{part.stockQty}</span>
-                <span>{part.minStock}</span>
-                <span>{[part.location, part.supplierName].filter(Boolean).join(" · ") || "—"}</span>
-              </div>
-            ))}
           </div>
-        ) : <Empty text="Nessun ricambio sotto la scorta minima." />}
-      </section>
+          <div className={styles.financeGrid}>
+            <Finance label="Incassi" value={euro.format(financial.payments || 0)} />
+            <Finance label="Valore consegnato" value={euro.format(financial.deliveredValue || 0)} sub={`${financial.deliveries || 0} consegne`} />
+            <Finance label="Costi registrati" value={euro.format(financial.deliveredCost || 0)} />
+            <Finance label="Margine" value={euro.format(financial.margin || 0)} />
+            <Finance label="Ticket medio" value={euro.format(financial.averageTicket || 0)} />
+            <Finance label="Tempo medio" value={formatTurnaround(financial.averageTurnaroundHours || 0)} sub="accettazione → consegna" />
+          </div>
+        </section>
+      ) : null}
+
+      {visibility.inventory ? (
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <div>
+              <h2>Scorte da riordinare</h2>
+              <p>Ricambi alla soglia minima o sotto soglia.</p>
+            </div>
+            <a className={styles.textLink} href="/magazzino">Apri magazzino</a>
+          </div>
+          {(data?.lowStock || []).length ? (
+            <div className={styles.stockTable}>
+              <div className={`${styles.stockRow} ${styles.stockHead}`}>
+                <span>Ricambio</span><span>SKU</span><span>Giacenza</span><span>Minimo</span><span>Posizione / fornitore</span>
+              </div>
+              {data.lowStock.map((part) => (
+                <div className={styles.stockRow} key={part.id}>
+                  <strong>{part.name}</strong>
+                  <span>{part.sku || "—"}</span>
+                  <span>{part.stockQty}</span>
+                  <span>{part.minStock}</span>
+                  <span>{[part.location, part.supplierName].filter(Boolean).join(" · ") || "—"}</span>
+                </div>
+              ))}
+            </div>
+          ) : <Empty text="Nessun ricambio sotto la scorta minima." />}
+        </section>
+      ) : null}
     </main>
   );
 }
 
 function Kpi({ title, value, note, tone = "normal", href = "" }) {
-  const content = (
-    <>
-      <span className={styles.kpiTitle}>{title}</span>
-      <strong className={styles.kpiValue}>{value}</strong>
-      <span className={styles.kpiNote}>{note}</span>
-    </>
-  );
+  const content = <><span className={styles.kpiTitle}>{title}</span><strong className={styles.kpiValue}>{value}</strong><span className={styles.kpiNote}>{note}</span></>;
   const className = `${styles.kpiCard} ${tone === "warning" ? styles.kpiWarning : tone === "danger" ? styles.kpiDanger : tone === "good" ? styles.kpiGood : ""}`;
   return href ? <a className={className} href={href}>{content}</a> : <div className={className}>{content}</div>;
 }
