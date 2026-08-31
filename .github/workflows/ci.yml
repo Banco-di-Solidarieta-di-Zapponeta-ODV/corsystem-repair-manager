@@ -108,6 +108,9 @@ jobs:
       - name: Apply Notifications migration SQL
         run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831193000_notifications/migration.sql
 
+      - name: Apply Staff roles migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831204000_staff_roles/migration.sql
+
       - name: Generate current Prisma client
         run: npx prisma generate --schema=prisma/schema.prisma
 
@@ -125,3 +128,6 @@ jobs:
 
       - name: Verify Notifications migration
         run: node scripts/test-notification-migration.mjs
+
+      - name: Verify Staff roles migration
+        run: node scripts/test-staff-role-migration.mjs
