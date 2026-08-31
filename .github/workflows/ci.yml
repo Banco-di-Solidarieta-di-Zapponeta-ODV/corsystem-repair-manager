@@ -131,3 +131,63 @@ jobs:
 
       - name: Verify Staff roles migration
         run: node scripts/test-staff-role-migration.mjs
+
+  fictional-e2e:
+    name: Full fictional laboratory E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: corsystem_e2e
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/corsystem_e2e
+      REPAIRNOTE_COOKIE_SECURE: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+      E2E_BASE_URL: http://127.0.0.1:3000
+      E2E_PASSWORD: CorSystem-E2E-Only-2026!
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create clean current database
+        run: npx prisma db push --skip-generate
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Start CorSystem application
+        run: |
+          nohup npm run start > /tmp/corsystem-e2e.log 2>&1 &
+          echo $! > /tmp/corsystem-e2e.pid
+
+      - name: Run complete fictional repair flow
+        run: node scripts/test-fictional-e2e-flow.mjs
+
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/corsystem-e2e.log || true
