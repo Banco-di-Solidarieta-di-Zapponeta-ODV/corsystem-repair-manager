@@ -216,6 +216,12 @@ model Repair {
   paymentMethod       String       @default("none")
   discountAmount      Decimal      @default(0) @db.Decimal(12, 2)
   costAmount          Decimal      @default(0) @db.Decimal(12, 2)
+  finalAmount         Decimal      @default(0) @db.Decimal(12, 2)
+  finalCostAmount     Decimal      @default(0) @db.Decimal(12, 2)
+  finalMargin         Decimal      @default(0) @db.Decimal(12, 2)
+  readyAt             DateTime?
+  deliveredAt         DateTime?
+  warrantyUntil       DateTime?
   frontPhoto          String       @db.LongText
   backPhoto           String       @db.LongText
   signatureDataUrl    String       @db.LongText
@@ -239,6 +245,8 @@ model Repair {
   payments            Payment[]
   repairParts         RepairPart[]
   stockMovements      StockMovement[]
+  finalTests          RepairTest[]
+  delivery            DeliveryRecord?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
@@ -248,6 +256,9 @@ model Repair {
   @@index([sourceRepairId])
   @@index([status])
   @@index([repairTime])
+  @@index([readyAt])
+  @@index([deliveredAt])
+  @@index([warrantyUntil])
   @@index([createdAt])
   @@index([ticketSort])
   @@fulltext([searchText])
@@ -378,6 +389,46 @@ model StockMovement {
   @@index([repairId])
   @@index([type])
   @@index([happenedAt])
+}
+
+model RepairTest {
+  id             String   @id @default(cuid())
+  repairId       String
+  status         String   @default("DRAFT")
+  checklist      Json
+  notes          String   @db.Text
+  technicianId   String   @default("")
+  technicianName String   @default("")
+  createdBy      String   @default("")
+  completedAt    DateTime?
+  repair         Repair   @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([repairId])
+  @@index([status])
+  @@index([completedAt])
+}
+
+model DeliveryRecord {
+  id                String   @id @default(cuid())
+  repairId          String   @unique
+  handedTo          String   @default("")
+  note              String   @db.Text
+  settlementMode    String   @default("PAID")
+  amountDue         Decimal  @default(0) @db.Decimal(12, 2)
+  amountPaid        Decimal  @default(0) @db.Decimal(12, 2)
+  balanceAtDelivery Decimal  @default(0) @db.Decimal(12, 2)
+  warrantyMonths    Int      @default(0)
+  warrantyUntil     DateTime?
+  deliveredAt       DateTime @default(now())
+  createdBy         String   @default("")
+  repair            Repair   @relation(fields: [repairId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([deliveredAt])
+  @@index([settlementMode])
 }
 
 model RepairItem {
