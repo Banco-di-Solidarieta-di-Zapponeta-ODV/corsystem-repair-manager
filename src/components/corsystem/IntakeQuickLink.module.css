@@ -10,7 +10,8 @@
 }
 
 .link,
-.deviceLink {
+.deviceLink,
+.workLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -30,7 +31,8 @@
   border: 1px solid rgba(255, 255, 255, .14);
 }
 
-.deviceLink {
+.deviceLink,
+.workLink {
   min-height: 40px;
   padding: 8px 15px;
   background: rgba(255, 255, 255, .97);
@@ -38,8 +40,15 @@
   border: 1px solid #d1d5db;
 }
 
+.workLink {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
 .link:hover,
-.deviceLink:hover {
+.deviceLink:hover,
+.workLink:hover {
   transform: translateY(-1px);
   box-shadow: 0 15px 34px rgba(15, 23, 42, .22);
 }
@@ -87,7 +96,8 @@
     padding: 10px 14px;
   }
 
-  .deviceLink {
+  .deviceLink,
+  .workLink {
     min-height: 38px;
     padding: 8px 13px;
   }
