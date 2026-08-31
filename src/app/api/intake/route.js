@@ -49,6 +49,7 @@ export async function POST(request) {
     }).catch((error) => ({ error: String(error?.message || error) }));
     return Response.json({
       ...result,
+      repair: serializeRepair(result.repair),
       notification,
       _revisionPatch: await getRevisionPatch(["clients", "repairs"])
     });
@@ -235,6 +236,13 @@ async function nextCorSystemTicket(tx) {
   const sequence = previous + 1;
   const ticket = `${prefix}${String(sequence).padStart(5, "0")}`;
   return { ticket, ticketSort: BigInt(`${year}${String(sequence).padStart(5, "0")}`) };
+}
+
+function serializeRepair(repair) {
+  return {
+    ...repair,
+    ticketSort: Number(repair?.ticketSort || 0)
+  };
 }
 
 function serializeIntakeProperties(body, now = new Date()) {
