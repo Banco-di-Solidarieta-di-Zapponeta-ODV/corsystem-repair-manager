@@ -165,35 +165,51 @@ async function addPayment(repairId, body, staff) {
   if (amount <= 0) throwHttpError(400, "Inserisci un importo maggiore di zero");
   const method = String(body.method || "cash").trim();
   if (!PAYMENT_METHODS.includes(method)) throwHttpError(400, "Metodo di pagamento non valido");
-
-  const repair = await prisma.repair.findUnique({
-    where: { id: repairId },
-    include: {
-      quotes: { where: { status: "APPROVED" }, orderBy: { version: "desc" }, take: 1 },
-      payments: { orderBy: { paidAt: "asc" } }
-    }
-  });
-  if (!repair) throwHttpError(404, "Pratica non trovata");
-  const financial = financialSummary(repair);
-  if (financial.amountDue <= 0) throwHttpError(409, "La pratica non ha un importo da incassare");
-  if (amount > financial.balance + 0.009) {
-    throwHttpError(409, `Importo superiore al saldo residuo di € ${financial.balance.toFixed(2)}`);
-  }
-
   const paidAt = body.paidAt ? new Date(body.paidAt) : new Date();
   if (Number.isNaN(paidAt.getTime())) throwHttpError(400, "Data pagamento non valida");
 
-  const payment = await prisma.payment.create({
-    data: {
-      repairId,
-      amount,
-      method,
-      note: String(body.note || "").trim().slice(0, 191),
-      paidAt,
-      createdBy: staffLabel(staff)
+  return prisma.$transaction(async (tx) => {
+    const repair = await tx.repair.findUnique({
+      where: { id: repairId },
+      include: {
+        quotes: { where: { status: "APPROVED" }, orderBy: { version: "desc" }, take: 1 },
+        payments: { orderBy: { paidAt: "asc" } }
+      }
+    });
+    if (!repair) throwHttpError(404, "Pratica non trovata");
+    const financial = financialSummary(repair);
+    if (financial.amountDue <= 0) throwHttpError(409, "La pratica non ha un importo da incassare");
+    if (amount > financial.balance + 0.009) {
+      throwHttpError(409, `Importo superiore al saldo residuo di € ${financial.balance.toFixed(2)}`);
     }
+
+    let legacyMaterialized = false;
+    if (!repair.payments.length && Number(repair.deposit || 0) > 0.009) {
+      await tx.payment.create({
+        data: {
+          repairId,
+          amount: money(repair.deposit),
+          method: legacyPaymentMethod(repair.paymentMethod),
+          note: "Acconto storico RepairNOTE",
+          paidAt: legacyPaymentDate(repair.repairTime, repair.createdAt),
+          createdBy: "Migrazione compatibilità CorSystem"
+        }
+      });
+      legacyMaterialized = true;
+    }
+
+    const payment = await tx.payment.create({
+      data: {
+        repairId,
+        amount,
+        method,
+        note: String(body.note || "").trim().slice(0, 191),
+        paidAt,
+        createdBy: staffLabel(staff)
+      }
+    });
+    return { payment, legacyMaterialized };
   });
-  return { payment };
 }
 
 async function deliverRepair(repairId, body, staff) {
@@ -317,6 +333,18 @@ function financialSummary(repair) {
     costAmount: money(repair.costAmount),
     projectedMargin: money(amountDue - money(repair.costAmount))
   };
+}
+
+function legacyPaymentMethod(value) {
+  const method = String(value || "").toLowerCase();
+  if (method === "cash") return "cash";
+  if (method === "card") return "card";
+  return "other";
+}
+
+function legacyPaymentDate(repairTime, createdAt) {
+  const candidate = repairTime ? new Date(repairTime) : new Date(createdAt);
+  return Number.isNaN(candidate.getTime()) ? new Date() : candidate;
 }
 
 function statusPatch(repair, status, type, staff, extra = {}) {
