@@ -1,5 +1,6 @@
-import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
+import { authErrorResponse, hasCapability, requireAnyCapability, requireStaff } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { CAPABILITIES } from "@/features/access/roles";
 import { notifyRepairEvent } from "@/features/notifications/server";
 import {
   PAYMENT_METHODS,
@@ -13,11 +14,16 @@ const TEST_START_STATUSES = new Set(["IN_LAVORAZIONE", "IN_TEST"]);
 
 export async function GET(_request, { params }) {
   try {
-    await requireAnyPageAccess(["repairs", "finance"]);
+    const staff = await requireAnyCapability([
+      CAPABILITIES.REPAIR_VIEW,
+      CAPABILITIES.FINAL_TEST_MANAGE,
+      CAPABILITIES.PAYMENT_MANAGE,
+      CAPABILITIES.DELIVERY_MANAGE
+    ]);
     const { repairId } = await params;
     const repair = await loadRepair(repairId);
     if (!repair) throwHttpError(404, "Pratica non trovata");
-    return Response.json(buildPayload(repair));
+    return Response.json(buildPayload(repair, staff));
   } catch (error) {
     return authErrorResponse(error);
   }
@@ -25,10 +31,20 @@ export async function GET(_request, { params }) {
 
 export async function POST(request, { params }) {
   try {
-    const staff = await requireAnyPageAccess(["repairs", "finance"]);
+    const staff = await requireStaff();
     const { repairId } = await params;
     const body = await request.json();
     const action = String(body?.action || "").trim();
+
+    if (["test-save", "test-complete", "mark-ready"].includes(action)) {
+      requireLocalCapability(staff, CAPABILITIES.FINAL_TEST_MANAGE);
+    } else if (action === "payment-add") {
+      requireLocalCapability(staff, CAPABILITIES.PAYMENT_MANAGE);
+    } else if (action === "deliver") {
+      requireLocalCapability(staff, CAPABILITIES.DELIVERY_MANAGE);
+    } else {
+      throwHttpError(400, "Azione di chiusura non valida");
+    }
 
     if (action === "test-save") return Response.json(await saveTest(repairId, body, staff));
     if (action === "test-complete") return Response.json(await completeTest(repairId, body, staff));
@@ -322,12 +338,37 @@ async function loadRepair(repairId) {
   });
 }
 
-function buildPayload(repair) {
-  const financial = financialSummary(repair);
+function buildPayload(repair, staff) {
+  const canTest = hasCapability(staff, CAPABILITIES.FINAL_TEST_MANAGE);
+  const canPay = hasCapability(staff, CAPABILITIES.PAYMENT_MANAGE);
+  const canDeliver = hasCapability(staff, CAPABILITIES.DELIVERY_MANAGE);
+  const canSeeFinance = canPay || canDeliver || staff?.isAdmin;
+  const financial = canSeeFinance ? financialSummary(repair) : null;
+  const safeRepair = canSeeFinance
+    ? repair
+    : {
+        ...repair,
+        budget: null,
+        deposit: null,
+        paymentMethod: null,
+        costAmount: null,
+        finalAmount: null,
+        finalCostAmount: null,
+        finalMargin: null,
+        quotes: [],
+        payments: []
+      };
+
   return {
-    repair,
+    repair: safeRepair,
     financial,
-    legacyDepositUsed: repair.payments.length === 0 && Number(repair.deposit || 0) > 0
+    legacyDepositUsed: canSeeFinance ? repair.payments.length === 0 && Number(repair.deposit || 0) > 0 : false,
+    permissions: {
+      finalTest: canTest,
+      payment: canPay,
+      delivery: canDeliver,
+      finance: canSeeFinance
+    }
   };
 }
 
@@ -379,6 +420,11 @@ function appendJsonArray(value, entry) {
 
 function staffLabel(staff) {
   return staff?.name || staff?.username || "CorSystem";
+}
+
+function requireLocalCapability(staff, capability) {
+  if (hasCapability(staff, capability)) return;
+  throwHttpError(403, "Non hai i permessi necessari per questa operazione");
 }
 
 function throwHttpError(status, message) {
