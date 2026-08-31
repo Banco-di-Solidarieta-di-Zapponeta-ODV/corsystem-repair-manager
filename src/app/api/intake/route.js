@@ -3,6 +3,7 @@ import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { buildRepairSearchText } from "@/lib/search-text";
 import { getRevisionPatch } from "@/lib/data-store";
+import { notifyRepairEvent } from "@/features/notifications/server";
 import {
   DEFAULT_DOCUMENT_TYPE,
   normalizeClientLevel,
@@ -42,8 +43,12 @@ export async function POST(request) {
     validateRequest(body);
 
     const result = await createIntakeWithRetry(body, staff);
+    const notification = await notifyRepairEvent(result.repair.id, "INTAKE_CREATED", {
+      dedupeSuffix: result.repair.id
+    }).catch((error) => ({ error: String(error?.message || error) }));
     return Response.json({
       ...result,
+      notification,
       _revisionPatch: await getRevisionPatch(["clients", "repairs"])
     });
   } catch (error) {
