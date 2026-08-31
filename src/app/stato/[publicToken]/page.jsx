@@ -38,7 +38,7 @@ export default async function CustomerRepairStatusPage({ params }) {
   const statusLabel = repairStatusLabel(repair.status);
   const progress = customerProgress(repair.status);
   const deviceName = deviceDisplayName(repair.device || {}, repair);
-  const identifier = deviceIdentifier(repair.device || {}, repair);
+  const identifier = maskPublicIdentifier(deviceIdentifier(repair.device || {}, repair));
   const hint = customerHint(progress.key, progress.cancelled);
 
   return (
@@ -116,6 +116,16 @@ function StatusField({ label, value }) {
       <div className={styles.value}>{String(value || "-")}</div>
     </div>
   );
+}
+
+function maskPublicIdentifier(identifier) {
+  const value = String(identifier || "").trim();
+  if (!value) return "";
+  const prefix = value.startsWith("IMEI ") ? "IMEI" : value.startsWith("S/N ") ? "S/N" : "ID";
+  const raw = value.replace(/^(IMEI|S\/N)\s+/i, "");
+  if (!raw) return "";
+  const tail = raw.slice(-4);
+  return `${prefix} ••••${tail}`;
 }
 
 function customerHint(key, cancelled) {
