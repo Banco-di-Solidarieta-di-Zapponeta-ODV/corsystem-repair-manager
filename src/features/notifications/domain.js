@@ -17,7 +17,7 @@ export function normalizeItalianPhone(value) {
   if (raw.startsWith("00")) raw = `+${raw.slice(2)}`;
   if (raw.startsWith("+")) return raw;
   if (raw.startsWith("39") && raw.length >= 11) return `+${raw}`;
-  return `+39${raw.replace(/^0+/, "")}`;
+  return `+39${raw}`;
 }
 
 export function validEmail(value) {
