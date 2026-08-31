@@ -23,26 +23,29 @@ function run(command, args, extraEnv = {}) {
 }
 
 console.log(`CorSystem deploy protetto → ${target.toUpperCase()}`);
-console.log("1/7 Preflight database");
+console.log("1/8 Preflight database");
 run("node", ["scripts/deployment/preflight.mjs", "--expect=compatible"]);
 
-console.log("2/7 Audit dipendenze");
+console.log("2/8 Audit dipendenze");
 run("npm", ["audit", "--audit-level=high"]);
 
-console.log("3/7 Validazione e build PRIMA di toccare il database");
+console.log("3/8 Validazione e build PRIMA di toccare il database");
 run("npx", ["prisma", "validate"]);
 run("npm", ["run", "build"]);
 
-console.log("4/7 Snapshot pre-deploy con checksum");
+console.log("4/8 Snapshot pre-deploy con checksum");
 run("node", ["scripts/deployment/snapshot.mjs"]);
 
-console.log("5/7 Applicazione migrazioni Prisma");
+console.log("5/8 Registrazione baseline RepairNOTE, se necessaria");
+run("node", ["scripts/deployment/baseline.mjs"]);
+
+console.log("6/8 Applicazione migrazioni Prisma");
 run("npx", ["prisma", "migrate", "deploy"]);
 
-console.log("6/7 Generazione Prisma Client");
+console.log("7/8 Generazione Prisma Client");
 run("npx", ["prisma", "generate"]);
 
-console.log("7/7 Verifica post-migrazione");
+console.log("8/8 Verifica post-migrazione");
 run("node", ["scripts/deployment/verify.mjs"]);
 
 console.log(`\n✓ Deploy database ${target} completato.`);
