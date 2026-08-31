@@ -7,13 +7,12 @@ on:
   push:
     branches:
       - develop
-      - feature/client-device-intake
 
 permissions:
   contents: read
 
 concurrency:
-  group: corsystem-ci-${{ github.workflow }}-${{ github.ref }}
+  group: corsystem-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}
   cancel-in-progress: true
 
 jobs:
