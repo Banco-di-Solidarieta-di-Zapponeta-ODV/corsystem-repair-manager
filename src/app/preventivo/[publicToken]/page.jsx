@@ -26,7 +26,7 @@ export default async function PublicQuotePage({ params }) {
     }
   });
 
-  if (!quote) notFound();
+  if (!quote || ["DRAFT", "LEGACY"].includes(quote.status)) notFound();
 
   const expired = quote.status === "SENT" && isQuoteExpired(quote);
   const status = expired ? "EXPIRED" : quote.status;
