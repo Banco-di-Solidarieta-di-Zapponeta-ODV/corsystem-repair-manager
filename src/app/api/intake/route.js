@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { buildRepairSearchText, ticketSortValue } from "@/lib/search-text";
+import { buildRepairSearchText } from "@/lib/search-text";
 import { getRevisionPatch } from "@/lib/data-store";
 import {
   DEFAULT_DOCUMENT_TYPE,
@@ -42,7 +42,7 @@ export async function POST(request) {
     const result = await prisma.$transaction(async (tx) => {
       const client = await resolveClient(tx, body);
       const device = await resolveDevice(tx, body, client.id);
-      const ticket = await nextCorSystemTicket(tx);
+      const { ticket, ticketSort } = await nextCorSystemTicket(tx);
       const now = new Date();
       const repairTime = formatRepairTime(now);
       const intakeProperties = serializeIntakeProperties(body);
@@ -114,7 +114,7 @@ export async function POST(request) {
           ],
           notificationLog: [],
           searchText,
-          ticketSort: BigInt(ticketSortValue(ticket))
+          ticketSort
         }
       });
 
@@ -215,7 +215,12 @@ async function nextCorSystemTicket(tx) {
     select: { ticket: true }
   });
   const previous = Number(String(latest?.ticket || "").slice(prefix.length)) || 0;
-  return `${prefix}${String(previous + 1).padStart(5, "0")}`;
+  const sequence = previous + 1;
+  const ticket = `${prefix}${String(sequence).padStart(5, "0")}`;
+  return {
+    ticket,
+    ticketSort: BigInt(`${year}${String(sequence).padStart(5, "0")}`)
+  };
 }
 
 function serializeIntakeProperties(body) {
