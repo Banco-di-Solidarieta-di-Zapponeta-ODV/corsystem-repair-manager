@@ -8,7 +8,7 @@ export async function POST(request, { params }) {
     const response = String(body?.response || "").trim().toUpperCase();
     const customerNote = String(body?.customerNote || "").trim().slice(0, 4000);
 
-    if (!['APPROVED', 'REJECTED'].includes(response)) {
+    if (!["APPROVED", "REJECTED"].includes(response)) {
       return Response.json({ error: "Risposta non valida" }, { status: 400 });
     }
 
@@ -20,13 +20,13 @@ export async function POST(request, { params }) {
       if (!quote) throwHttpError(404, "Preventivo non trovato");
 
       if (quote.status === "APPROVED" || quote.status === "REJECTED") {
-        return { quoteStatus: quote.status, repairStatus: quote.repair.status, alreadyResponded: true };
+        return { quoteStatus: quote.status, repairStatus: quote.repair.status, alreadyResponded: true, expired: false };
       }
       if (quote.status !== "SENT") throwHttpError(409, "Questo preventivo non è disponibile per una nuova risposta");
 
       if (isQuoteExpired(quote)) {
         await tx.quote.update({ where: { id: quote.id }, data: { status: "EXPIRED" } });
-        throwHttpError(410, "Il preventivo è scaduto. Contatta CorSystem per una nuova versione.");
+        return { quoteStatus: "EXPIRED", repairStatus: quote.repair.status, alreadyResponded: false, expired: true };
       }
 
       const now = new Date();
@@ -65,9 +65,12 @@ export async function POST(request, { params }) {
         }
       });
 
-      return { quoteStatus: updatedQuote.status, repairStatus, alreadyResponded: false };
+      return { quoteStatus: updatedQuote.status, repairStatus, alreadyResponded: false, expired: false };
     });
 
+    if (result.expired) {
+      return Response.json({ error: "Il preventivo è scaduto. Contatta CorSystem per una nuova versione.", ...result }, { status: 410 });
+    }
     return Response.json(result);
   } catch (error) {
     return Response.json({ error: error?.message || "Errore durante la registrazione della risposta" }, { status: error?.status || 500 });
