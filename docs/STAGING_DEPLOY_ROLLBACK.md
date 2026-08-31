@@ -42,6 +42,41 @@ npm run deploy:snapshot
 
 Il preflight deve riconoscere le tabelle legacy `Staff`, `Client`, `Repair` e `Part`, e deve classificare lo schema come `legacy`.
 
+### Percorso preferito quando si dispone di un dump reale
+
+Usare un database vuoto dedicato il cui nome contenga chiaramente `staging`, `stage`, `test`, `ci`, `sandbox`, `clone` oppure `copy`. Esempio:
+
+```text
+corsystem_repair_staging
+```
+
+Il dump deve contenere il solo database RepairNOTE e NON deve contenere istruzioni `CREATE DATABASE`, `DROP DATABASE` o `USE ...`.
+
+Configurare `DATABASE_URL` sul database di staging e poi eseguire:
+
+```bash
+CORSYSTEM_STAGING_IMPORT_CONFIRM=REPLACE-STAGING-corsystem_repair_staging \
+npm run staging:from-dump -- --dump=/percorso/repairnote-reale.sql
+```
+
+Il comando:
+
+1. rifiuta database che non abbiano un nome chiaramente da staging/test/clone;
+2. verifica il dump riga per riga senza caricarlo interamente in memoria;
+3. calcola SHA-256 del dump;
+4. pulisce esclusivamente il database staging indicato;
+5. ripristina il dump RepairNOTE;
+6. pretende che il preflight riconosca lo schema `legacy`;
+7. fotografa i conteggi `Staff`, `Client`, `Repair`, `Part`;
+8. esegue il deploy protetto CorSystem con baseline RepairNOTE;
+9. esegue `deploy:verify`;
+10. confronta i conteggi prima/dopo;
+11. produce un report JSON GO/NO-GO in `reports/`.
+
+I report `staging-real-dump-*.json` e tutti i dump SQL sono esclusi da Git.
+
+Un esito GO di questo comando è soltanto un GO tecnico preliminare. Devono comunque essere eseguiti UAT e campionamento manuale dei dati storici.
+
 ## Fase B - Migrare STAGING
 
 ```bash
@@ -57,9 +92,10 @@ Il comando esegue nell'ordine:
 3. Prisma validate;
 4. build Next.js prima di toccare il database;
 5. snapshot SQL con checksum;
-6. `prisma migrate deploy`;
-7. Prisma generate;
-8. verifica post-migrazione.
+6. baseline RepairNOTE se il database è legacy e non possiede ancora `_prisma_migrations`;
+7. `prisma migrate deploy`;
+8. Prisma generate;
+9. verifica post-migrazione.
 
 Al termine eseguire:
 
@@ -85,6 +121,16 @@ Poi riavviare l'app staging e fare UAT con account distinti Admin, Front Office,
 - QR stato cliente;
 - dashboard;
 - verifica che i ruoli non vedano/facciano operazioni non autorizzate.
+
+Per il collaudo su dati reali, campionare inoltre almeno:
+
+- 10 clienti con più riparazioni storiche;
+- 10 riparazioni con IMEI valorizzato;
+- 10 riparazioni senza IMEI;
+- preventivi/importi legacy diversi da zero;
+- ricambi legacy con prezzi diversi;
+- almeno un account amministratore e un account non amministratore;
+- record con note/foto/firme, se presenti.
 
 Annotare i conteggi pre/post di Client, Repair, Part e Staff. Non cancellare lo snapshot staging finché il collaudo non è concluso.
 
@@ -173,6 +219,15 @@ Per ogni deploy conservare almeno:
 
 Non salvare dump reali nel repository GitHub. `backups/`, `*.sql`, `*.dump` e formati analoghi sono già esclusi da `.gitignore`.
 
+## Stato dei test automatici
+
+La CI contiene due livelli distinti:
+
+- **CorSystem CI**: build, audit, migrazioni/backfill e flusso fittizio end-to-end;
+- **CorSystem Deploy Safety**: schema RepairNOTE legacy → snapshot → baseline → deploy CorSystem → verify → rollback → ritorno legacy.
+
+Il percorso `staging:from-dump` viene anch'esso testato usando un dump generato dalla fixture legacy. In questo modo il primo utilizzo con il dump reale non coincide con il primo utilizzo del codice d'importazione.
+
 ## Limite attuale
 
-Questi strumenti preparano e validano il deploy, ma il test definitivo prima della produzione deve essere fatto su una copia/snapshot REALE del database RepairNOTE. La CI usa fixture realistiche, non i dati reali CorSystem.
+La toolchain è pronta e testata, ma il test definitivo prima della produzione richiede ancora un dump/snapshot REALE del database RepairNOTE CorSystem. La CI usa fixture realistiche, non i dati reali aziendali.
