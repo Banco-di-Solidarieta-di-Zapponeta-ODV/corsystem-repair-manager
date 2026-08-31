@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
-import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
+import { authErrorResponse, requireAnyCapability, requireCapability } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { CAPABILITIES } from "@/features/access/roles";
 import { normalizeDiagnosisInput, normalizeQuoteInput } from "@/features/workflow/domain";
 import { notifyRepairEvent } from "@/features/notifications/server";
 
@@ -11,7 +12,11 @@ const EARLY_REPAIR_STATUSES = new Set([
 
 export async function GET(_request, { params }) {
   try {
-    await requireAnyPageAccess(["repairs", "clients"]);
+    await requireAnyCapability([
+      CAPABILITIES.REPAIR_VIEW,
+      CAPABILITIES.DIAGNOSIS_MANAGE,
+      CAPABILITIES.QUOTE_MANAGE
+    ]);
     const { repairId } = await params;
     const [repair, technicians] = await Promise.all([
       prisma.repair.findUnique({
@@ -52,7 +57,7 @@ export async function GET(_request, { params }) {
 
 export async function PUT(request, { params }) {
   try {
-    const staff = await requireAnyPageAccess(["repairs"]);
+    const staff = await requireCapability(CAPABILITIES.DIAGNOSIS_MANAGE);
     const { repairId } = await params;
     const body = await request.json();
     const diagnosisInput = normalizeDiagnosisInput(body?.diagnosis || body);
@@ -77,11 +82,7 @@ export async function PUT(request, { params }) {
       const now = new Date();
       const diagnosis = await tx.diagnosis.upsert({
         where: { repairId },
-        update: {
-          ...diagnosisInput,
-          technicianName,
-          completedAt: diagnosisInput.status === "FINAL" ? now : null
-        },
+        update: { ...diagnosisInput, technicianName, completedAt: diagnosisInput.status === "FINAL" ? now : null },
         create: {
           repairId,
           ...diagnosisInput,
@@ -95,15 +96,10 @@ export async function PUT(request, { params }) {
       const statusPatch = EARLY_REPAIR_STATUSES.has(repair.status)
         ? repairStatusPatch(repair, nextStatus, diagnosisInput.status === "FINAL" ? "diagnosis-finalized" : "diagnosis-saved", staff)
         : {};
-      const technicianPatch = diagnosisInput.technicianId
-        ? { technicianId: diagnosisInput.technicianId, technicianName }
-        : {};
+      const technicianPatch = diagnosisInput.technicianId ? { technicianId: diagnosisInput.technicianId, technicianName } : {};
 
       if (Object.keys(statusPatch).length || Object.keys(technicianPatch).length) {
-        await tx.repair.update({
-          where: { id: repairId },
-          data: { ...statusPatch, ...technicianPatch }
-        });
+        await tx.repair.update({ where: { id: repairId }, data: { ...statusPatch, ...technicianPatch } });
       }
 
       return diagnosis;
@@ -117,7 +113,7 @@ export async function PUT(request, { params }) {
 
 export async function POST(request, { params }) {
   try {
-    const staff = await requireAnyPageAccess(["repairs"]);
+    const staff = await requireCapability(CAPABILITIES.QUOTE_MANAGE);
     const { repairId } = await params;
     const body = await request.json();
     const action = String(body?.action || "").trim();
