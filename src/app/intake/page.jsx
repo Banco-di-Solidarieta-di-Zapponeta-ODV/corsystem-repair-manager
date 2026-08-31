@@ -155,6 +155,7 @@ export default function IntakePage() {
       return setError("Inserisci almeno marca/modello, IMEI o numero seriale del dispositivo.");
     }
     if (!reportedIssue.trim()) return setError("Descrivi il problema segnalato dal cliente.");
+    if (!signatureDataUrl) return setError("Acquisisci la firma del cliente prima di creare la pratica.");
     if (!privacyAccepted) return setError("È necessario accettare l'informativa privacy.");
 
     setSaving(true);
@@ -204,7 +205,7 @@ export default function IntakePage() {
               Registra cliente, dispositivo e condizioni di ingresso. La pratica viene collegata allo storico del dispositivo e riceve automaticamente un numero CS.
             </p>
           </div>
-          <a className={styles.backLink} href="/dashboard/repairs">← Torna alle riparazioni</a>
+          <a className={styles.backLink} href="/#/dashboard/repairs">← Torna alle riparazioni</a>
         </header>
 
         {success ? <SuccessPanel result={success} onReset={resetForm} /> : (
@@ -355,7 +356,7 @@ export default function IntakePage() {
 
               <section className={styles.card}>
                 <h2 className={styles.cardTitle}><span className={styles.step}>5</span> Firma e privacy</h2>
-                <p className={styles.cardHint}>La firma viene salvata con la pratica di accettazione.</p>
+                <p className={styles.cardHint}>La firma viene salvata con la pratica di accettazione ed è obbligatoria.</p>
                 <SignaturePad value={signatureDataUrl} onChange={setSignatureDataUrl} />
                 <label className={styles.privacy}>
                   <input type="checkbox" checked={privacyAccepted} onChange={(event) => setPrivacyAccepted(event.target.checked)} />
@@ -365,7 +366,7 @@ export default function IntakePage() {
             </div>
 
             <div className={styles.actions}>
-              <span>{signatureDataUrl ? "Firma acquisita ✓" : "Firma non ancora acquisita"}</span>
+              <span>{signatureDataUrl ? "Firma acquisita ✓" : "Firma obbligatoria"}</span>
               <button className={styles.primaryButton} type="submit" disabled={saving}>
                 {saving ? "Creazione pratica…" : "Crea pratica CorSystem"}
               </button>
@@ -498,7 +499,7 @@ function SuccessPanel({ result, onReset }) {
       <div className={styles.successTicket}>{repair.ticket}</div>
       <div>{client.name} · {deviceLabel(device)}</div>
       <div className={styles.successLinks}>
-        <a href={`/dashboard/repairs/${encodeURIComponent(repair.id)}`}>Apri pratica</a>
+        <a href={`/#/dashboard/repairs/${encodeURIComponent(repair.id)}`}>Apri pratica</a>
         <button type="button" onClick={onReset}>Nuova accettazione</button>
       </div>
     </section>
