@@ -1,6 +1,7 @@
 import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { nonNegativeMoney, positiveQty } from "@/features/inventory/domain";
+import { notifyRepairEvent } from "@/features/notifications/server";
 
 const WORKABLE_STATUSES = new Set(["AUTORIZZATO", "ATTESA_RICAMBIO", "IN_LAVORAZIONE"]);
 
@@ -65,9 +66,17 @@ export async function POST(request, { params }) {
     const body = await request.json();
     const action = String(body?.action || "").trim();
 
-    if (action === "request") return Response.json(await requestPart(repairId, body, staff));
+    if (action === "request") {
+      const result = await requestPart(repairId, body, staff);
+      result.notification = await waitingPartNotification(repairId, result.repairPart?.id, "request");
+      return Response.json(result);
+    }
     if (action === "reserve") return Response.json(await reservePart(repairId, body.repairPartId, staff));
-    if (action === "order") return Response.json(await orderPart(repairId, body, staff));
+    if (action === "order") {
+      const result = await orderPart(repairId, body, staff);
+      result.notification = await waitingPartNotification(repairId, result.repairPart?.id, "order");
+      return Response.json(result);
+    }
     if (action === "receive") return Response.json(await receivePart(repairId, body, staff));
     if (action === "use") return Response.json(await usePart(repairId, body, staff));
     if (action === "cancel") return Response.json(await cancelPart(repairId, body.repairPartId, staff));
@@ -77,6 +86,12 @@ export async function POST(request, { params }) {
   } catch (error) {
     return authErrorResponse(error);
   }
+}
+
+async function waitingPartNotification(repairId, repairPartId, phase) {
+  return notifyRepairEvent(repairId, "WAITING_PART", {
+    dedupeSuffix: `${phase}:${repairPartId || "part"}`
+  }).catch((error) => ({ error: String(error?.message || error) }));
 }
 
 async function requestPart(repairId, body, staff) {
