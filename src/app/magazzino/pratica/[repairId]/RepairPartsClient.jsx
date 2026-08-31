@@ -116,10 +116,10 @@ export default function RepairPartsClient({ repairId }) {
                         }}>Ordina</button> : null}
                         {row.status === "ORDERED" ? <button className={styles.small} disabled={saving || !workable} onClick={() => {
                           const cost = window.prompt("Costo unitario ricevuto", String(row.unitCostSnapshot || row.part?.cost || 0));
-                          act("receive", { repairPartId: row.id, unitCost: Number(cost || 0) }, "Ricambio ricevuto e caricato a magazzino.");
+                          act("receive", { repairPartId: row.id, unitCost: Number(cost || 0) }, "Ricambio ricevuto, caricato e prenotato per la pratica.");
                         }}>Ricevi</button> : null}
-                        {["RESERVED", "RECEIVED"].includes(row.status) ? <button className={styles.primary} disabled={saving || !workable} onClick={() => act("use", { repairPartId: row.id }, "Ricambio scaricato e registrato come utilizzato.")}>Utilizza</button> : null}
-                        !["USED", "CANCELLED"].includes(row.status) ? <button className={styles.secondary} disabled={saving || !workable} onClick={() => act("cancel", { repairPartId: row.id }, "Richiesta ricambio annullata.")}>Annulla</button> : null}
+                        {row.status === "RESERVED" ? <button className={styles.primary} disabled={saving || !workable} onClick={() => act("use", { repairPartId: row.id }, "Ricambio scaricato e registrato come utilizzato.")}>Utilizza</button> : null}
+                        {!["USED", "CANCELLED"].includes(row.status) ? <button className={styles.secondary} disabled={saving || !workable} onClick={() => act("cancel", { repairPartId: row.id }, "Richiesta ricambio annullata.")}>Annulla</button> : null}
                       </div>
                     </td>
                   </tr>
