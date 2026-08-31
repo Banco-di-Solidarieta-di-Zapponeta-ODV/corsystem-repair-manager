@@ -1,3 +1,7 @@
+INSERT INTO `Staff` (`id`, `name`, `username`, `email`, `passwordHash`, `isAdmin`, `pagePermissions`, `sessionTokenHash`, `sessionExpiresAt`, `createdAt`, `updatedAt`) VALUES
+('staff-admin-legacy', 'Admin Legacy', 'admin-legacy', 'admin@example.test', 'test:test', TRUE, JSON_ARRAY('repairs','clients','finance','settings'), NULL, NULL, NOW(3), NOW(3)),
+('staff-custom-legacy', 'Operatore Legacy', 'operatore-legacy', 'operatore@example.test', 'test:test', FALSE, JSON_ARRAY('repairs','clients'), NULL, NULL, NOW(3), NOW(3));
+
 INSERT INTO `Client` (`id`, `name`, `docType`, `identity`, `email`, `phone`, `address`, `comment`, `level`, `createdAt`, `updatedAt`) VALUES
 ('client-imei', 'Cliente IMEI', 'CF', 'TESTIMEI', 'imei@example.test', '3200000001', '', '', 'VIP', NOW(3), NOW(3)),
 ('client-legacy', 'Cliente Legacy', 'CF', 'TESTLEGACY', 'legacy@example.test', '3200000002', '', '', 'VIP', NOW(3), NOW(3));
