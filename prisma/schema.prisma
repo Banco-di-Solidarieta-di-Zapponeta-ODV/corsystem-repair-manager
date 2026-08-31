@@ -14,12 +14,15 @@ model Staff {
   email            String   @default("")
   passwordHash     String   @db.VarChar(255)
   isAdmin          Boolean  @default(false)
+  role             String   @default("CUSTOM") @db.VarChar(32)
   pagePermissions  Json
   sessionTokenHash String?  @db.VarChar(255)
   sessionExpiresAt DateTime?
   sessions         StaffSession[]
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  @@index([role])
 }
 
 model StaffSession {
