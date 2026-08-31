@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { isQuoteExpired } from "@/features/workflow/domain";
+import { notifyRepairEvent } from "@/features/notifications/server";
 
 export async function POST(request, { params }) {
   try {
@@ -20,7 +21,16 @@ export async function POST(request, { params }) {
       if (!quote) throwHttpError(404, "Preventivo non trovato");
 
       if (quote.status === "APPROVED" || quote.status === "REJECTED") {
-        return { quoteStatus: quote.status, repairStatus: quote.repair.status, alreadyResponded: true, expired: false };
+        return {
+          quoteStatus: quote.status,
+          repairStatus: quote.repair.status,
+          alreadyResponded: true,
+          expired: false,
+          repairId: quote.repairId,
+          quoteId: quote.id,
+          quoteVersion: quote.version,
+          quoteTotal: Number(quote.total)
+        };
       }
       if (quote.status !== "SENT") throwHttpError(409, "Questo preventivo non è disponibile per una nuova risposta");
 
@@ -65,12 +75,34 @@ export async function POST(request, { params }) {
         }
       });
 
-      return { quoteStatus: updatedQuote.status, repairStatus, alreadyResponded: false, expired: false };
+      return {
+        quoteStatus: updatedQuote.status,
+        repairStatus,
+        alreadyResponded: false,
+        expired: false,
+        repairId: quote.repairId,
+        quoteId: quote.id,
+        quoteVersion: quote.version,
+        quoteTotal: Number(updatedQuote.total)
+      };
     });
 
     if (result.expired) {
       return Response.json({ error: "Il preventivo è scaduto. Contatta CorSystem per una nuova versione.", ...result }, { status: 410 });
     }
+
+    if (!result.alreadyResponded && result.repairId) {
+      result.notification = await notifyRepairEvent(
+        result.repairId,
+        result.quoteStatus === "APPROVED" ? "QUOTE_APPROVED" : "QUOTE_REJECTED",
+        {
+          quoteId: result.quoteId,
+          amount: result.quoteTotal,
+          dedupeSuffix: `v${result.quoteVersion}`
+        }
+      ).catch((error) => ({ error: String(error?.message || error) }));
+    }
+
     return Response.json(result);
   } catch (error) {
     return Response.json({ error: error?.message || "Errore durante la registrazione della risposta" }, { status: error?.status || 500 });
