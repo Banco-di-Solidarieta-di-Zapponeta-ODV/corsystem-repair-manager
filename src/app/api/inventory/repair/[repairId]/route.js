@@ -168,11 +168,11 @@ async function receivePart(repairId, body, staff) {
     if (!row) throwHttpError(404, "Richiesta ricambio non trovata");
     if (row.status !== "ORDERED") throwHttpError(409, "Puoi ricevere solo un ricambio ordinato");
 
-    const qty = positiveQty(body.quantity || row.qtyRequested);
+    const remaining = Math.max(0, Number(row.qtyRequested || 0) - Number(row.qtyUsed || 0));
+    const qty = positiveQty(body.quantity || remaining);
     const unitCost = nonNegativeMoney(body.unitCost || row.unitCostSnapshot || row.part.cost);
     const stockBefore = Number(row.part.stockQty || 0);
     const stockAfter = roundQty(stockBefore + qty);
-    const remaining = Math.max(0, Number(row.qtyRequested || 0) - Number(row.qtyUsed || 0));
     const qtyReserved = Math.min(remaining, roundQty(Number(row.qtyReserved || 0) + qty));
 
     await tx.part.update({
@@ -261,7 +261,9 @@ async function cancelPart(repairId, repairPartId, staff) {
     const repair = await requireWorkableRepair(tx, repairId);
     const row = await tx.repairPart.findFirst({ where: { id: repairPartId, repairId } });
     if (!row) throwHttpError(404, "Richiesta ricambio non trovata");
-    if (row.status === "USED") throwHttpError(409, "Un ricambio già utilizzato non può essere annullato");
+    if (row.status === "USED" || Number(row.qtyUsed || 0) > 0) {
+      throwHttpError(409, "Una richiesta con ricambi già utilizzati non può essere annullata");
+    }
 
     const updated = await tx.repairPart.update({
       where: { id: row.id },
