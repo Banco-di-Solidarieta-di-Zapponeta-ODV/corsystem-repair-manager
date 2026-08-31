@@ -9,7 +9,8 @@
   gap: 8px;
 }
 
-.link {
+.link,
+.deviceLink {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -17,18 +18,30 @@
   min-height: 46px;
   padding: 11px 17px;
   border-radius: 999px;
-  background: #172033;
-  color: #fff;
   text-decoration: none;
   font-size: 14px;
   font-weight: 800;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, .24);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .18);
+}
+
+.link {
+  background: #172033;
+  color: #fff;
   border: 1px solid rgba(255, 255, 255, .14);
 }
 
-.link:hover {
+.deviceLink {
+  min-height: 40px;
+  padding: 8px 15px;
+  background: rgba(255, 255, 255, .97);
+  color: #172033;
+  border: 1px solid #d1d5db;
+}
+
+.link:hover,
+.deviceLink:hover {
   transform: translateY(-1px);
-  box-shadow: 0 15px 34px rgba(15, 23, 42, .28);
+  box-shadow: 0 15px 34px rgba(15, 23, 42, .22);
 }
 
 .printActions {
@@ -72,5 +85,10 @@
   .link {
     min-height: 44px;
     padding: 10px 14px;
+  }
+
+  .deviceLink {
+    min-height: 38px;
+    padding: 8px 13px;
   }
 }
