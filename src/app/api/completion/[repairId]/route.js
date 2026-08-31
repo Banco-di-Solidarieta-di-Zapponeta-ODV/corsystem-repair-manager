@@ -33,7 +33,6 @@ export async function POST(request, { params }) {
     if (action === "test-complete") return Response.json(await completeTest(repairId, body, staff));
     if (action === "mark-ready") return Response.json(await markReady(repairId, staff));
     if (action === "payment-add") return Response.json(await addPayment(repairId, body, staff));
-    if (action === "payment-delete") return Response.json(await deletePayment(repairId, body.paymentId, staff));
     if (action === "deliver") return Response.json(await deliverRepair(repairId, body, staff));
 
     throwHttpError(400, "Azione di chiusura non valida");
@@ -135,7 +134,7 @@ async function markReady(repairId, staff) {
     if (repair.status !== "IN_TEST") throwHttpError(409, "La pratica deve essere in test");
 
     const lastTest = await tx.repairTest.findFirst({
-      where: { repairId },
+      where: { repairId, status: { in: ["PASSED", "FAILED"] } },
       orderBy: [{ completedAt: "desc" }, { createdAt: "desc" }]
     });
     if (!lastTest || lastTest.status !== "PASSED") {
@@ -167,27 +166,34 @@ async function addPayment(repairId, body, staff) {
   const method = String(body.method || "cash").trim();
   if (!PAYMENT_METHODS.includes(method)) throwHttpError(400, "Metodo di pagamento non valido");
 
-  const repair = await prisma.repair.findUnique({ where: { id: repairId }, select: { id: true } });
+  const repair = await prisma.repair.findUnique({
+    where: { id: repairId },
+    include: {
+      quotes: { where: { status: "APPROVED" }, orderBy: { version: "desc" }, take: 1 },
+      payments: { orderBy: { paidAt: "asc" } }
+    }
+  });
   if (!repair) throwHttpError(404, "Pratica non trovata");
+  const financial = financialSummary(repair);
+  if (financial.amountDue <= 0) throwHttpError(409, "La pratica non ha un importo da incassare");
+  if (amount > financial.balance + 0.009) {
+    throwHttpError(409, `Importo superiore al saldo residuo di € ${financial.balance.toFixed(2)}`);
+  }
+
+  const paidAt = body.paidAt ? new Date(body.paidAt) : new Date();
+  if (Number.isNaN(paidAt.getTime())) throwHttpError(400, "Data pagamento non valida");
+
   const payment = await prisma.payment.create({
     data: {
       repairId,
       amount,
       method,
       note: String(body.note || "").trim().slice(0, 191),
-      paidAt: body.paidAt ? new Date(body.paidAt) : new Date(),
+      paidAt,
       createdBy: staffLabel(staff)
     }
   });
   return { payment };
-}
-
-async function deletePayment(repairId, paymentId, staff) {
-  if (!staff?.isAdmin) throwHttpError(403, "Solo un amministratore può eliminare un pagamento");
-  const payment = await prisma.payment.findFirst({ where: { id: String(paymentId || ""), repairId } });
-  if (!payment) throwHttpError(404, "Pagamento non trovato");
-  await prisma.payment.delete({ where: { id: payment.id } });
-  return { deleted: true };
 }
 
 async function deliverRepair(repairId, body, staff) {
@@ -195,6 +201,7 @@ async function deliverRepair(repairId, body, staff) {
     const repair = await tx.repair.findUnique({
       where: { id: repairId },
       include: {
+        client: { select: { id: true, name: true } },
         quotes: { where: { status: "APPROVED" }, orderBy: { version: "desc" }, take: 1 },
         payments: { orderBy: { paidAt: "asc" } },
         delivery: true
@@ -225,7 +232,8 @@ async function deliverRepair(repairId, body, staff) {
     const finalCostAmount = money(repair.costAmount);
     const finalAmount = financial.amountDue;
     const finalMargin = money(finalAmount - finalCostAmount);
-    const handedTo = String(body.handedTo || repair.clientId || "").trim().slice(0, 191);
+    const handedTo = String(body.handedTo || repair.client?.name || "Cliente").trim().slice(0, 191);
+    if (!handedTo) throwHttpError(400, "Indica a chi viene consegnato il dispositivo");
 
     const delivery = await tx.deliveryRecord.create({
       data: {
