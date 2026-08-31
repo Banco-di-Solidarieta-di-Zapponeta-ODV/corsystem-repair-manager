@@ -1,5 +1,6 @@
 import { authErrorResponse, requireAnyPageAccess } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { notifyRepairEvent } from "@/features/notifications/server";
 import {
   PAYMENT_METHODS,
   addMonths,
@@ -31,9 +32,21 @@ export async function POST(request, { params }) {
 
     if (action === "test-save") return Response.json(await saveTest(repairId, body, staff));
     if (action === "test-complete") return Response.json(await completeTest(repairId, body, staff));
-    if (action === "mark-ready") return Response.json(await markReady(repairId, staff));
+    if (action === "mark-ready") {
+      const result = await markReady(repairId, staff);
+      const notification = await notifyRepairEvent(repairId, "READY", { dedupeSuffix: "ready" })
+        .catch((error) => ({ error: String(error?.message || error) }));
+      return Response.json({ ...result, notification });
+    }
     if (action === "payment-add") return Response.json(await addPayment(repairId, body, staff));
-    if (action === "deliver") return Response.json(await deliverRepair(repairId, body, staff));
+    if (action === "deliver") {
+      const result = await deliverRepair(repairId, body, staff);
+      const notification = await notifyRepairEvent(repairId, "DELIVERED", {
+        amount: Number(result.finalAmount || 0),
+        dedupeSuffix: result.delivery?.id || "delivered"
+      }).catch((error) => ({ error: String(error?.message || error) }));
+      return Response.json({ ...result, notification });
+    }
 
     throwHttpError(400, "Azione di chiusura non valida");
   } catch (error) {
