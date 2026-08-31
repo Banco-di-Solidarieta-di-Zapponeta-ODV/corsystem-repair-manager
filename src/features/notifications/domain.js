@@ -37,41 +37,43 @@ export function renderNotification(event, context = {}) {
   const quoteUrl = context.quoteUrl || "";
   const amount = Number(context.amount || 0);
   const amountText = amount > 0 ? ` Importo: € ${amount.toFixed(2).replace(".", ",")}.` : "";
+  const statusText = statusUrl ? ` Puoi seguire lo stato qui: ${statusUrl}` : "";
+  const quoteText = quoteUrl ? ` Puoi consultarlo e rispondere qui: ${quoteUrl}` : "";
 
   const templates = {
     INTAKE_CREATED: {
       subject: `CorSystem - pratica ${ticket} registrata`,
-      body: `Ciao ${customer}, abbiamo registrato il tuo ${device} con pratica ${ticket}. Puoi seguire lo stato qui: ${statusUrl}`
+      body: `Ciao ${customer}, abbiamo registrato il tuo ${device} con pratica ${ticket}.${statusText}`
     },
     QUOTE_SENT: {
       subject: `CorSystem - preventivo disponibile per ${ticket}`,
-      body: `Ciao ${customer}, il preventivo della pratica ${ticket} è pronto.${amountText} Puoi consultarlo e rispondere qui: ${quoteUrl}`
+      body: `Ciao ${customer}, il preventivo della pratica ${ticket} è pronto.${amountText}${quoteText}`
     },
     QUOTE_APPROVED: {
       subject: `CorSystem - preventivo approvato ${ticket}`,
-      body: `Ciao ${customer}, abbiamo ricevuto l'approvazione del preventivo per la pratica ${ticket}. Procederemo con la lavorazione. Stato pratica: ${statusUrl}`
+      body: `Ciao ${customer}, abbiamo ricevuto l'approvazione del preventivo per la pratica ${ticket}. Procederemo con la lavorazione.${statusText}`
     },
     QUOTE_REJECTED: {
       subject: `CorSystem - preventivo non approvato ${ticket}`,
-      body: `Ciao ${customer}, abbiamo registrato la tua decisione sul preventivo della pratica ${ticket}. Se necessario ti contatteremo per concordare i prossimi passi. Stato pratica: ${statusUrl}`
+      body: `Ciao ${customer}, abbiamo registrato la tua decisione sul preventivo della pratica ${ticket}. Se necessario ti contatteremo per concordare i prossimi passi.${statusText}`
     },
     WAITING_PART: {
       subject: `CorSystem - ricambio in attesa ${ticket}`,
-      body: `Ciao ${customer}, la pratica ${ticket} è in attesa di un ricambio necessario alla riparazione. Puoi seguire gli aggiornamenti qui: ${statusUrl}`
+      body: `Ciao ${customer}, la pratica ${ticket} è in attesa di un ricambio necessario alla riparazione.${statusText}`
     },
     READY: {
       subject: `CorSystem - ${ticket} pronto per il ritiro`,
-      body: `Ciao ${customer}, il tuo ${device} è pronto per il ritiro presso CorSystem.${amountText} Stato pratica: ${statusUrl}`
+      body: `Ciao ${customer}, il tuo ${device} è pronto per il ritiro presso CorSystem.${amountText}${statusText}`
     },
     DELIVERED: {
       subject: `CorSystem - pratica ${ticket} consegnata`,
-      body: `Ciao ${customer}, la pratica ${ticket} risulta consegnata. Grazie per aver scelto CorSystem. Puoi conservare questo link come riferimento: ${statusUrl}`
+      body: `Ciao ${customer}, la pratica ${ticket} risulta consegnata. Grazie per aver scelto CorSystem.${statusUrl ? ` Puoi conservare questo link come riferimento: ${statusUrl}` : ""}`
     }
   };
 
   return templates[event] || {
     subject: `CorSystem - aggiornamento pratica ${ticket}`,
-    body: `Ciao ${customer}, ci sono aggiornamenti sulla pratica ${ticket}. Stato: ${statusUrl}`
+    body: `Ciao ${customer}, ci sono aggiornamenti sulla pratica ${ticket}.${statusText}`
   };
 }
 
