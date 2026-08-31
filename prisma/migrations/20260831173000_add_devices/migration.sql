@@ -32,46 +32,49 @@ ALTER TABLE `Repair`
   FOREIGN KEY (`deviceId`) REFERENCES `Device`(`id`)
   ON DELETE SET NULL ON UPDATE CASCADE;
 
--- Backfill conservativo: ogni repair genera un'identita dispositivo deterministica.
+-- Backfill conservativo: calcoliamo prima una fingerprint per ogni repair,
+-- poi raggruppiamo su clientId + fingerprint. In questo modo la query resta
+-- compatibile con MySQL/MariaDB anche quando ONLY_FULL_GROUP_BY e attivo.
 -- L'IMEI ha priorita. Senza IMEI usiamo cliente + marca + modello + properties.
 INSERT INTO `Device` (
   `id`, `clientId`, `type`, `brand`, `model`, `imei`, `serialNumber`, `color`, `notes`, `fingerprint`, `createdAt`, `updatedAt`
 )
 SELECT
-  CONCAT('dev_', SUBSTRING(SHA2(CONCAT(
-    r.`clientId`, '|',
-    CASE
-      WHEN TRIM(COALESCE(r.`imei`, '')) <> '' THEN CONCAT('imei:', LOWER(TRIM(r.`imei`)))
-      ELSE CONCAT('legacy:', LOWER(TRIM(COALESCE(r.`brand`, ''))), '|', LOWER(TRIM(COALESCE(r.`model`, ''))), '|', LOWER(TRIM(COALESCE(r.`properties`, ''))))
-    END
-  ), 256), 1, 24)) AS `id`,
-  r.`clientId`,
+  CONCAT('dev_', SUBSTRING(legacy.`fingerprint`, 1, 24)) AS `id`,
+  legacy.`clientId`,
   'Altro' AS `type`,
-  MAX(COALESCE(r.`brand`, '')) AS `brand`,
-  MAX(COALESCE(r.`model`, '')) AS `model`,
-  MAX(COALESCE(r.`imei`, '')) AS `imei`,
+  MAX(legacy.`brand`) AS `brand`,
+  MAX(legacy.`model`) AS `model`,
+  MAX(legacy.`imei`) AS `imei`,
   '' AS `serialNumber`,
   '' AS `color`,
   '' AS `notes`,
-  SHA2(CONCAT(
-    r.`clientId`, '|',
-    CASE
-      WHEN TRIM(COALESCE(r.`imei`, '')) <> '' THEN CONCAT('imei:', LOWER(TRIM(r.`imei`)))
-      ELSE CONCAT('legacy:', LOWER(TRIM(COALESCE(r.`brand`, ''))), '|', LOWER(TRIM(COALESCE(r.`model`, ''))), '|', LOWER(TRIM(COALESCE(r.`properties`, ''))))
-    END
-  ), 256) AS `fingerprint`,
-  MIN(r.`createdAt`) AS `createdAt`,
-  MAX(r.`updatedAt`) AS `updatedAt`
-FROM `Repair` r
-GROUP BY
-  r.`clientId`,
-  SHA2(CONCAT(
-    r.`clientId`, '|',
-    CASE
-      WHEN TRIM(COALESCE(r.`imei`, '')) <> '' THEN CONCAT('imei:', LOWER(TRIM(r.`imei`)))
-      ELSE CONCAT('legacy:', LOWER(TRIM(COALESCE(r.`brand`, ''))), '|', LOWER(TRIM(COALESCE(r.`model`, ''))), '|', LOWER(TRIM(COALESCE(r.`properties`, ''))))
-    END
-  ), 256);
+  legacy.`fingerprint`,
+  MIN(legacy.`createdAt`) AS `createdAt`,
+  MAX(legacy.`updatedAt`) AS `updatedAt`
+FROM (
+  SELECT
+    r.`clientId`,
+    COALESCE(r.`brand`, '') AS `brand`,
+    COALESCE(r.`model`, '') AS `model`,
+    COALESCE(r.`imei`, '') AS `imei`,
+    r.`createdAt`,
+    r.`updatedAt`,
+    SHA2(CONCAT(
+      r.`clientId`, '|',
+      CASE
+        WHEN TRIM(COALESCE(r.`imei`, '')) <> '' THEN CONCAT('imei:', LOWER(TRIM(r.`imei`)))
+        ELSE CONCAT(
+          'legacy:',
+          LOWER(TRIM(COALESCE(r.`brand`, ''))), '|',
+          LOWER(TRIM(COALESCE(r.`model`, ''))), '|',
+          LOWER(TRIM(COALESCE(r.`properties`, '')))
+        )
+      END
+    ), 256) AS `fingerprint`
+  FROM `Repair` r
+) AS legacy
+GROUP BY legacy.`clientId`, legacy.`fingerprint`;
 
 UPDATE `Repair` r
 JOIN `Device` d
@@ -80,7 +83,12 @@ JOIN `Device` d
     r.`clientId`, '|',
     CASE
       WHEN TRIM(COALESCE(r.`imei`, '')) <> '' THEN CONCAT('imei:', LOWER(TRIM(r.`imei`)))
-      ELSE CONCAT('legacy:', LOWER(TRIM(COALESCE(r.`brand`, ''))), '|', LOWER(TRIM(COALESCE(r.`model`, ''))), '|', LOWER(TRIM(COALESCE(r.`properties`, ''))))
+      ELSE CONCAT(
+        'legacy:',
+        LOWER(TRIM(COALESCE(r.`brand`, ''))), '|',
+        LOWER(TRIM(COALESCE(r.`model`, ''))), '|',
+        LOWER(TRIM(COALESCE(r.`properties`, '')))
+      )
     END
   ), 256)
 SET r.`deviceId` = d.`id`;
