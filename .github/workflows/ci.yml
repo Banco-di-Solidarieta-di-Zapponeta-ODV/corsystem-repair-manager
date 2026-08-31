@@ -102,6 +102,9 @@ jobs:
       - name: Apply Inventory migration SQL
         run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831184500_inventory/migration.sql
 
+      - name: Apply Completion migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831190500_completion/migration.sql
+
       - name: Generate current Prisma client
         run: npx prisma generate --schema=prisma/schema.prisma
 
@@ -113,3 +116,6 @@ jobs:
 
       - name: Verify Inventory migration
         run: node scripts/test-inventory-migration.mjs
+
+      - name: Verify Completion migration
+        run: node scripts/test-completion-migration.mjs
