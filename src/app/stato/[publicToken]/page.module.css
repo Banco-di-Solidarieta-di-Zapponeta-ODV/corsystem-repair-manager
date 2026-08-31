@@ -1,0 +1,176 @@
+.page {
+  min-height: 100vh;
+  background: #f5f7fb;
+  padding: 28px 16px;
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.shell {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.header,
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 18px;
+  box-shadow: 0 14px 40px rgba(17, 24, 39, .06);
+}
+
+.header {
+  padding: 24px;
+  margin-bottom: 16px;
+}
+
+.brand {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #374151;
+}
+
+.title {
+  margin: 6px 0 0;
+  font-size: clamp(28px, 6vw, 42px);
+  line-height: 1.05;
+  letter-spacing: -.03em;
+}
+
+.ticket {
+  margin-top: 14px;
+  display: inline-flex;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: .04em;
+}
+
+.statusLine {
+  margin-top: 18px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.statusLabel {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.updated {
+  color: #6b7280;
+  font-size: 12px;
+  text-align: right;
+}
+
+.progressTrack {
+  height: 9px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 14px;
+}
+
+.progressBar {
+  height: 100%;
+  background: #111827;
+  border-radius: inherit;
+  transition: width .3s ease;
+}
+
+.cancelled {
+  background: #991b1b;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 10px;
+  color: #9ca3af;
+}
+
+.stepActive {
+  color: #111827;
+  font-weight: 700;
+}
+
+.card {
+  padding: 22px;
+  margin-top: 16px;
+}
+
+.cardTitle {
+  margin: 0 0 14px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #6b7280;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+}
+
+.label {
+  font-size: 11px;
+  color: #6b7280;
+  margin-bottom: 3px;
+}
+
+.value {
+  font-size: 15px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.issue {
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: 15px;
+}
+
+.hint {
+  background: #f9fafb;
+  border-left: 4px solid #111827;
+  padding: 14px 16px;
+  line-height: 1.5;
+  border-radius: 0 10px 10px 0;
+}
+
+.contact {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.contact a {
+  color: #111827;
+  font-weight: 700;
+}
+
+.footer {
+  text-align: center;
+  color: #6b7280;
+  font-size: 12px;
+  padding: 24px 8px 8px;
+}
+
+@media (max-width: 620px) {
+  .page { padding: 12px; }
+  .header, .card { padding: 18px; border-radius: 14px; }
+  .grid { grid-template-columns: 1fr; gap: 12px; }
+  .statusLine { display: block; }
+  .updated { text-align: left; margin-top: 5px; }
+  .steps { grid-template-columns: repeat(3, 1fr); row-gap: 8px; }
+}
