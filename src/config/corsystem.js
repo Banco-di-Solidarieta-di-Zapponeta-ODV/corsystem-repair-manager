@@ -13,7 +13,7 @@ export const COMPANY_PROFILE = Object.freeze({
   emailHref: "",
   phone: "3283645185",
   whatsapp: "3283645185",
-  logoPath: "/brand/corsystem-logo.svg"
+  logoPath: "/brand/corsystem-logo.png"
 });
 
 export const STORAGE_KEY = "corsystem-repair-manager-v1";
