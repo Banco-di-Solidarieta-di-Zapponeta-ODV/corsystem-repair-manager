@@ -16,7 +16,7 @@
   width: min(330px, 82vw);
   height: 185px;
   margin: 0 auto 8px;
-  background: url("/brand/corsystem-logo.png") center / contain no-repeat;
+  background: url("/brand/corsystem-logo.svg") center / contain no-repeat;
   font-size: 0 !important;
   line-height: 0;
 }
@@ -62,7 +62,7 @@
 .sidebar .brand-title {
   min-height: 88px;
   padding: 8px 12px !important;
-  background: url("/brand/corsystem-logo.png") left center / 168px auto no-repeat;
+  background: url("/brand/corsystem-logo.svg") left center / 168px auto no-repeat;
   font-size: 0 !important;
   line-height: 0;
 }
