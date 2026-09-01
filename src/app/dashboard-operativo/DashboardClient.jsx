@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import BrandIdentity from "@/components/corsystem/BrandIdentity";
 import styles from "./dashboard.module.css";
 
 const euro = new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" });
@@ -69,6 +70,7 @@ export default function DashboardClient() {
     <main className={styles.shell}>
       <header className={styles.header}>
         <div>
+          <BrandIdentity variant="dashboard" />
           <div className={styles.eyebrow}>CorSystem Repair Manager · {roleLabels[data?.role] || data?.role || "Operatore"}</div>
           <h1>Dashboard operativo</h1>
           <p>Stato del laboratorio, criticità e carico tecnici{visibility.finance ? ", con andamento economico" : ""}.</p>
@@ -78,6 +80,7 @@ export default function DashboardClient() {
           <button type="button" onClick={load} disabled={loading}>{loading ? "Aggiorno…" : "Aggiorna"}</button>
           <a href="/intake">Nuova accettazione</a>
           <a href="/#/dashboard/repairs">Riparazioni</a>
+          {data?.role === "ADMIN" ? <a href="/operatori">Operatori</a> : null}
         </div>
       </header>
 
