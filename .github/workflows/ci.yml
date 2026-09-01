@@ -43,6 +43,9 @@ jobs:
       - name: Audit dependencies
         run: npm audit --audit-level=high
 
+      - name: Verify Italian defaults
+        run: node scripts/test-italian-defaults.mjs
+
       - name: Validate Prisma schema
         run: npx prisma validate
 
