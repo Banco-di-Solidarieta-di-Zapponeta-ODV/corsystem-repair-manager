@@ -44,16 +44,15 @@ export const statusOrder = ["预定", "预定到货", "维修中", "完成", "�
 
 export const defaultRepairTerms = `Las condiciones de la reparación del dispositivo móviles son las siguientes:1) No se hace responsable de posibles pérdidas de datos en cualquier soporte. Se recomienda hacer copia de la información previamente al depósito del equipo. El usuario se hace responsable en caso de no efectuar las correspondientes copias de seguridad.2) El móvil que se entregue mojado o caído, tenga desperfectos o esté quemado, así como en el caso de que tengamos que abrirlo y se compruebe que haya daños en la placa base o se descubran fallos ocultos como no arrancar, reiniciar u otros fallos, la empresa no tendrá responsabilidad alguna y el coste de dicha reparación será a cargo del cliente.3) A cada cliente se le entregará una ficha técnica con sus datos que será imprescindible aportar a la hora de recoger el dispositivo. En el caso de que vaya otra persona a retirarlo en su nombre, deberá aportar tal ficha así como su DNI.4) Todas las reparaciones están garantizadas por TRES MESES, según título iv, artículo 8, del r.d. 58/1988, de 29 de enero.5) Las pantallas reparadas, si llevan golpes o están mojados, así como cualquier otro daño ajeno a la reparación, ANULA A LA GARANTIA.Este Tiket caduca en 3 meses o cuando recoger móvil.`;
 
-export const defaultWhatsappProgressTemplate = `Hola {name},
+export const defaultWhatsappProgressTemplate = `Ciao {name},
 
-Somos {shop}.
-Puede consultar el estado de su reparación aquí:
+CorSystem ti informa che puoi consultare lo stato della riparazione qui:
 {url}
 
-Nº de orden: {ticket}
-Equipo: {device}
+Pratica: {ticket}
+Dispositivo: {device}
 
-Gracias.`;
+Grazie.`;
 
 export const defaultSettings = {
   shopName: "",
@@ -63,8 +62,8 @@ export const defaultSettings = {
   whatsappProgressTemplate: defaultWhatsappProgressTemplate,
   phone: "",
   taxRate: 21,
-  uiLanguage: "zh",
-  printLanguage: "zh",
+  uiLanguage: "it",
+  printLanguage: "it",
   scanShortcut: "F2",
   defaultWarrantyDays: 90,
   defaultWarrantyMonths: 3,
