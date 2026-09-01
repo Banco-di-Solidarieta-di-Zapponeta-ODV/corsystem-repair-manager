@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import BrandIdentity from "@/components/corsystem/BrandIdentity";
+import { COMPANY_PROFILE } from "@/config/corsystem";
 import { deviceDisplayName, formatItalianDateTime, maskCustomerName } from "@/features/intake/receipt";
 import { isQuoteExpired, QUOTE_STATUS_LABELS, serializeMoney } from "@/features/workflow/domain";
 import QuoteDecision from "./QuoteDecision";
@@ -39,7 +41,7 @@ export default async function PublicQuotePage({ params }) {
     <main className={styles.page}>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <div className={styles.brand}>CorSystem · Repair Manager</div>
+          <BrandIdentity variant="public" />
           <div className={styles.kicker}>Preventivo di riparazione</div>
           <h1>{quote.title || "Preventivo riparazione"}</h1>
           <div className={styles.ticket}>{repair.ticket} · versione {quote.version}</div>
@@ -92,7 +94,8 @@ export default async function PublicQuotePage({ params }) {
 
         <footer className={styles.footer}>
           Questo collegamento è personale e associato alla pratica {repair.ticket}. Non inoltrarlo a terzi.<br />
-          CorSystem · il tuo hub tecnologico
+          {COMPANY_PROFILE.displayName} · {COMPANY_PROFILE.address} · P.IVA {COMPANY_PROFILE.vatNumber}<br />
+          Tel/WhatsApp {COMPANY_PROFILE.phone} · {COMPANY_PROFILE.email}
         </footer>
       </div>
     </main>
