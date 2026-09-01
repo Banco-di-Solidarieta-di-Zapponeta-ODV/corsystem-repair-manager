@@ -23,6 +23,12 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
+    "deploy:preflight": "node scripts/deployment/preflight.mjs",
+    "deploy:snapshot": "node scripts/deployment/snapshot.mjs",
+    "deploy:verify": "node scripts/deployment/verify.mjs",
+    "deploy:apply": "node scripts/deployment/deploy.mjs",
+    "deploy:rollback": "node scripts/deployment/rollback.mjs",
+    "staging:from-dump": "node scripts/deployment/staging-from-dump.mjs",
     "mysql:setup": "node scripts/mysql-setup.mjs",
     "plesk:setup": "node scripts/plesk-setup.mjs",
     "plesk:pack": "node scripts/package-plesk.mjs",
@@ -35,7 +41,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.555.0",
-    "next": "^16.2.6",
+    "next": "16.3.3",
     "prisma": "^6.19.3",
     "qrcode": "^1.5.4",
     "react": "^19.2.1",
@@ -46,10 +52,16 @@
     "playwright": "^1.59.1",
     "typescript": "^5.9.3"
   },
-  "prisma": {
-    "seed": "node prisma/seed.js"
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "prisma@6.19.3": true,
+    "fsevents": false
   },
   "overrides": {
-    "postcss": "^8.5.10"
+    "deepmerge-ts": "8.0.2",
+    "nanoid": "3.3.18",
+    "postcss": "8.5.26",
+    "sharp": "0.35.3"
   }
 }

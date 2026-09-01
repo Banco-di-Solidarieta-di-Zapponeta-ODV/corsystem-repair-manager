@@ -1,0 +1,120 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.logo {
+  width: 132px;
+  max-width: 34vw;
+  height: auto;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+
+.copy {
+  min-width: 0;
+}
+
+.companyName {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--foreground, #101828);
+}
+
+.tagline {
+  margin-top: 3px;
+  color: var(--muted-foreground, #667085);
+  font-size: 0.82rem;
+}
+
+.details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 7px;
+  color: var(--muted-foreground, #667085);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.details a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.details a:hover {
+  text-decoration: underline;
+}
+
+.document {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.document .logo {
+  width: 150px;
+}
+
+.document .details {
+  max-width: 520px;
+}
+
+.public {
+  justify-content: center;
+  text-align: center;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.public .logo {
+  width: 170px;
+  max-width: 60vw;
+}
+
+.public .companyName {
+  font-size: 0.76rem;
+}
+
+.dashboard .logo {
+  width: 156px;
+}
+
+.dashboard .companyName {
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .root,
+  .document {
+    align-items: flex-start;
+  }
+
+  .logo,
+  .document .logo,
+  .dashboard .logo {
+    width: 112px;
+  }
+
+  .details {
+    flex-direction: column;
+    gap: 2px;
+  }
+}
+
+@media print {
+  .logo {
+    width: 38mm;
+  }
+
+  .companyName {
+    color: #111;
+  }
+
+  .tagline,
+  .details {
+    color: #444;
+  }
+}

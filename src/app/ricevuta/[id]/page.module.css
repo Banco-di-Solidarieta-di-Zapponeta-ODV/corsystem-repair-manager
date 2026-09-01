@@ -1,0 +1,283 @@
+.page {
+  min-height: 100vh;
+  background: #f3f4f6;
+  padding: 24px;
+  color: #111827;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.toolbar {
+  max-width: 210mm;
+  margin: 0 auto 16px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.toolbar button,
+.toolbar a {
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #111827;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.sheet {
+  margin: 0 auto;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(17, 24, 39, .12);
+}
+
+.a4 {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm;
+}
+
+.thermal {
+  width: 80mm;
+  min-height: 120mm;
+  padding: 5mm 4mm;
+  font-size: 11px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 14px;
+  border-bottom: 2px solid #111827;
+}
+
+.brand {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -.5px;
+}
+
+.thermal .brand {
+  font-size: 20px;
+  text-align: center;
+}
+
+.subtitle {
+  color: #4b5563;
+  margin-top: 4px;
+}
+
+.issuer {
+  text-align: right;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.thermal .header {
+  display: block;
+  text-align: center;
+}
+
+.thermal .issuer {
+  margin-top: 7px;
+  text-align: center;
+  font-size: 10px;
+}
+
+.ticketBlock {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-end;
+  padding: 18px 0 12px;
+}
+
+.thermal .ticketBlock {
+  display: block;
+  text-align: center;
+  padding: 12px 0 8px;
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.ticket {
+  font-size: 28px;
+  font-weight: 900;
+  letter-spacing: .4px;
+}
+
+.thermal .title {
+  font-size: 14px;
+}
+
+.thermal .ticket {
+  margin-top: 4px;
+  font-size: 21px;
+}
+
+.meta {
+  color: #4b5563;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.section {
+  border-top: 1px solid #d1d5db;
+  padding: 12px 0;
+}
+
+.sectionTitle {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: #6b7280;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 22px;
+}
+
+.thermal .grid {
+  grid-template-columns: 1fr;
+  gap: 4px;
+}
+
+.row {
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.label {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.value {
+  font-weight: 600;
+}
+
+.list {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+
+.list li {
+  margin: 3px 0;
+}
+
+.issue {
+  white-space: pre-wrap;
+  line-height: 1.5;
+  font-weight: 600;
+}
+
+.qrArea {
+  display: grid;
+  grid-template-columns: 1fr 135px;
+  align-items: center;
+  gap: 18px;
+}
+
+.qrArea img {
+  width: 135px;
+  height: 135px;
+}
+
+.thermal .qrArea {
+  display: block;
+  text-align: center;
+}
+
+.thermal .qrArea img {
+  width: 105px;
+  height: 105px;
+  margin-top: 8px;
+}
+
+.statusUrl {
+  margin-top: 6px;
+  color: #4b5563;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.signature {
+  max-width: 320px;
+  max-height: 90px;
+  object-fit: contain;
+  object-position: left center;
+  border-bottom: 1px solid #9ca3af;
+}
+
+.thermal .signature {
+  max-width: 100%;
+  max-height: 65px;
+}
+
+.terms {
+  font-size: 10px;
+  color: #4b5563;
+  line-height: 1.45;
+}
+
+.footer {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid #d1d5db;
+  text-align: center;
+  font-size: 10px;
+  color: #6b7280;
+}
+
+.thermal .section {
+  padding: 8px 0;
+}
+
+.thermal .sectionTitle {
+  font-size: 10px;
+}
+
+@media (max-width: 900px) {
+  .page { padding: 8px; }
+  .a4 { width: 100%; min-height: 0; padding: 20px; }
+  .grid { grid-template-columns: 1fr; }
+  .qrArea { grid-template-columns: 1fr; }
+}
+
+@media print {
+  .page {
+    background: #fff;
+    padding: 0;
+  }
+
+  .toolbar {
+    display: none !important;
+  }
+
+  .sheet {
+    box-shadow: none;
+    margin: 0;
+  }
+
+  .a4 {
+    width: auto;
+    min-height: 0;
+    padding: 0;
+  }
+
+  .thermal {
+    width: 72mm;
+    min-height: 0;
+    padding: 0;
+  }
+}

@@ -1,0 +1,153 @@
+.stack {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.link,
+.deviceLink,
+.workLink,
+.warehouseLink,
+.partsLink,
+.closeLink,
+.notificationLink,
+.dashboardLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  padding: 11px 17px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, .18);
+}
+
+.link {
+  background: #172033;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .14);
+}
+
+.deviceLink,
+.workLink,
+.warehouseLink,
+.partsLink,
+.closeLink,
+.notificationLink,
+.dashboardLink {
+  min-height: 40px;
+  padding: 8px 15px;
+  background: rgba(255, 255, 255, .97);
+  color: #172033;
+  border: 1px solid #d1d5db;
+}
+
+.dashboardLink {
+  background: #172033;
+  color: #fff;
+  border-color: #172033;
+}
+
+.workLink {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.warehouseLink,
+.partsLink {
+  background: #f0fdf4;
+  color: #166534;
+  border-color: #bbf7d0;
+}
+
+.partsLink {
+  background: #ecfdf3;
+}
+
+.closeLink {
+  background: #fff7ed;
+  color: #9a3412;
+  border-color: #fed7aa;
+}
+
+.notificationLink {
+  background: #f5f3ff;
+  color: #6d28d9;
+  border-color: #ddd6fe;
+}
+
+.link:hover,
+.deviceLink:hover,
+.workLink:hover,
+.warehouseLink:hover,
+.partsLink:hover,
+.closeLink:hover,
+.notificationLink:hover,
+.dashboardLink:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 15px 34px rgba(15, 23, 42, .22);
+}
+
+.printActions {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .96);
+  border: 1px solid #d1d5db;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, .14);
+}
+
+.printActions a {
+  min-width: 48px;
+  padding: 7px 10px;
+  border-radius: 999px;
+  text-align: center;
+  background: #f3f4f6;
+  color: #111827;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.printActions a:hover {
+  background: #e5e7eb;
+}
+
+.plus {
+  font-size: 20px;
+  line-height: 1;
+  font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .stack {
+    right: 14px;
+    bottom: 14px;
+  }
+
+  .link {
+    min-height: 44px;
+    padding: 10px 14px;
+  }
+
+  .deviceLink,
+  .workLink,
+  .warehouseLink,
+  .partsLink,
+  .closeLink,
+  .notificationLink,
+  .dashboardLink {
+    min-height: 38px;
+    padding: 8px 13px;
+  }
+}

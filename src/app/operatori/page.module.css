@@ -1,0 +1,43 @@
+.page { min-height: 100vh; background: #f5f7fb; padding: 32px 20px 64px; color: #172033; }
+.shell { max-width: 1280px; margin: 0 auto; }
+.header { display: flex; justify-content: space-between; gap: 24px; align-items: flex-start; margin-bottom: 24px; }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #53637a; }
+.header h1 { margin: 6px 0 8px; font-size: clamp(30px, 5vw, 48px); line-height: 1; }
+.header p { margin: 0; max-width: 760px; color: #607087; }
+.headerActions { display: flex; gap: 10px; flex-wrap: wrap; }
+.headerActions a { text-decoration: none; color: #172033; background: white; border: 1px solid #d9e0ea; border-radius: 12px; padding: 10px 14px; font-weight: 700; }
+.error, .notice { border-radius: 12px; padding: 12px 14px; margin: 0 0 18px; font-weight: 700; }
+.error { background: #fff1f1; border: 1px solid #f5c2c2; color: #922b2b; }
+.notice { background: #eefaf3; border: 1px solid #bfe7ce; color: #25623a; }
+.roleGrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+.roleCard { background: #172033; color: white; border-radius: 16px; padding: 18px; min-height: 180px; }
+.roleCard strong { display: block; font-size: 18px; margin-bottom: 8px; }
+.roleCard p { color: #c7d1df; margin: 0 0 14px; font-size: 14px; line-height: 1.45; }
+.roleCard div { display: flex; flex-wrap: wrap; gap: 6px; }
+.roleCard span { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); border-radius: 999px; padding: 5px 8px; font-size: 11px; }
+.columns { display: grid; grid-template-columns: 420px minmax(0, 1fr); gap: 20px; align-items: start; }
+.card { background: white; border: 1px solid #dfe5ee; border-radius: 18px; padding: 20px; box-shadow: 0 10px 30px rgba(31, 45, 70, .05); }
+.cardHead { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 18px; }
+.cardHead h2 { margin: 0 0 5px; font-size: 22px; }
+.cardHead p { margin: 0; color: #738198; font-size: 13px; }
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form label { display: grid; gap: 6px; font-size: 12px; font-weight: 800; color: #506079; }
+.form input, .form select { width: 100%; border: 1px solid #cfd7e3; border-radius: 10px; padding: 11px 12px; font: inherit; color: #172033; background: white; }
+.full { grid-column: 1 / -1; }
+.roleHint { display: grid; gap: 4px; background: #f4f7fb; border: 1px solid #dfe5ee; border-radius: 12px; padding: 12px; }
+.roleHint span { color: #65758c; font-size: 13px; line-height: 1.4; }
+.primary { border: 0; border-radius: 11px; background: #172033; color: white; padding: 12px 16px; font-weight: 800; cursor: pointer; }
+.primary:disabled { opacity: .55; cursor: wait; }
+.textButton, .rowActions button { border: 1px solid #d6dde7; background: white; color: #223048; border-radius: 9px; padding: 8px 10px; font-weight: 700; cursor: pointer; }
+.userList { display: grid; gap: 10px; }
+.userRow { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; border: 1px solid #e2e7ef; border-radius: 14px; padding: 12px; }
+.avatar { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: #edf1f7; font-weight: 900; }
+.userMain { min-width: 0; display: grid; gap: 3px; }
+.userMain > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.userMain > span, .userMain small { color: #6b7a90; overflow-wrap: anywhere; }
+.badge { background: #eef3f9; border-radius: 999px; padding: 4px 8px; font-size: 11px; font-weight: 800; color: #40516a; }
+.rowActions { display: flex; gap: 7px; }
+.rowActions .danger { color: #9b2f2f; border-color: #efcccc; }
+.empty { color: #78869a; padding: 28px 4px; text-align: center; }
+@media (max-width: 1000px) { .roleGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .columns { grid-template-columns: 1fr; } }
+@media (max-width: 680px) { .page { padding: 22px 12px 48px; } .header { flex-direction: column; } .roleGrid { grid-template-columns: 1fr; } .form { grid-template-columns: 1fr; } .full { grid-column: auto; } .userRow { grid-template-columns: 40px 1fr; } .rowActions { grid-column: 1 / -1; } }

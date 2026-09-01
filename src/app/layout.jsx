@@ -1,6 +1,8 @@
 import Script from "next/script";
 import "./globals.css";
+import "./corsystem-brand.css";
 import { APP_METADATA, DEFAULT_LOCALE, THEME_STORAGE_KEY } from "@/config/corsystem";
+import IntakeQuickLink from "@/components/corsystem/IntakeQuickLink";
 
 export const metadata = APP_METADATA;
 
@@ -27,6 +29,7 @@ export default function RootLayout({ children }) {
       <body>
         <Script id="corsystem-theme" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: themeScript }} />
         {children}
+        <IntakeQuickLink />
       </body>
     </html>
   );

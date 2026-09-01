@@ -1,0 +1,199 @@
+name: CorSystem CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+  push:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: corsystem-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Prisma validate and Next build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      DATABASE_URL: mysql://corsystem:ci-only@127.0.0.1:3306/corsystem_ci
+      REPAIRNOTE_ADMIN_USERNAME: admin
+      REPAIRNOTE_ADMIN_PASSWORD: ci-only-not-for-production
+      REPAIRNOTE_COOKIE_SECURE: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Verify Italian defaults
+        run: node scripts/test-italian-defaults.mjs
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build Next.js application
+        run: npm run build
+
+  migrations:
+    name: CorSystem migrations and legacy backfill
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: corsystem_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/corsystem_ci
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate legacy schema fixture
+        run: npx prisma validate --schema=prisma/schema.legacy.prisma
+
+      - name: Create legacy RepairNOTE schema
+        run: npx prisma db push --schema=prisma/schema.legacy.prisma --skip-generate
+
+      - name: Seed legacy repair history
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migration-tests/seed_legacy.sql
+
+      - name: Apply Device migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831173000_add_devices/migration.sql
+
+      - name: Apply Diagnosis and Quote migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831183000_add_diagnosis_quotes/migration.sql
+
+      - name: Apply Inventory migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831184500_inventory/migration.sql
+
+      - name: Apply Completion migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831190500_completion/migration.sql
+
+      - name: Apply Notifications migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831193000_notifications/migration.sql
+
+      - name: Apply Staff roles migration SQL
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migrations/20260831204000_staff_roles/migration.sql
+
+      - name: Generate current Prisma client
+        run: npx prisma generate --schema=prisma/schema.prisma
+
+      - name: Verify Device backfill
+        run: node scripts/test-device-migration.mjs
+
+      - name: Verify Diagnosis and Quote backfill
+        run: node scripts/test-workflow-migration.mjs
+
+      - name: Verify Inventory migration
+        run: node scripts/test-inventory-migration.mjs
+
+      - name: Verify Completion migration
+        run: node scripts/test-completion-migration.mjs
+
+      - name: Verify Notifications migration
+        run: node scripts/test-notification-migration.mjs
+
+      - name: Verify Staff roles migration
+        run: node scripts/test-staff-role-migration.mjs
+
+  fictional-e2e:
+    name: Full fictional laboratory E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: corsystem_e2e
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/corsystem_e2e
+      REPAIRNOTE_COOKIE_SECURE: "false"
+      NEXT_TELEMETRY_DISABLED: "1"
+      E2E_BASE_URL: http://127.0.0.1:3000
+      E2E_PASSWORD: CorSystem-E2E-Only-2026!
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create clean current database
+        run: npx prisma db push --skip-generate
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build production application
+        run: npm run build
+
+      - name: Start CorSystem application
+        run: |
+          nohup npm run start > /tmp/corsystem-e2e.log 2>&1 &
+          echo $! > /tmp/corsystem-e2e.pid
+
+      - name: Run complete fictional repair flow
+        run: node scripts/test-fictional-e2e-flow.mjs
+
+      - name: Show server log on failure
+        if: failure()
+        run: cat /tmp/corsystem-e2e.log || true

@@ -1,0 +1,106 @@
+name: CorSystem Deploy Safety
+
+on:
+  pull_request:
+    branches:
+      - develop
+
+permissions:
+  contents: read
+
+concurrency:
+  group: corsystem-deploy-safety-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy-rollback:
+    name: Legacy snapshot deploy verify rollback and dump rehearsal
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: corsystem_deploy_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      DATABASE_URL: mysql://root:root@127.0.0.1:3306/corsystem_deploy_ci
+      CORSYSTEM_BACKUP_DIR: /tmp/corsystem-deploy-backups
+      NEXT_TELEMETRY_DISABLED: "1"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Use Node.js 24
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ensure MySQL client tools
+        run: |
+          if ! command -v mysql >/dev/null 2>&1 || ! command -v mysqldump >/dev/null 2>&1; then
+            sudo apt-get update -qq
+            sudo apt-get install -y default-mysql-client
+          fi
+          mysql --version
+          mysqldump --version
+
+      - name: Create legacy RepairNOTE schema
+        run: npx prisma db push --schema=prisma/schema.legacy.prisma --skip-generate
+
+      - name: Seed legacy history
+        run: npx prisma db execute --schema=prisma/schema.legacy.prisma --file=prisma/migration-tests/seed_legacy.sql
+
+      - name: Preflight legacy database
+        run: npm run deploy:preflight -- --expect=legacy
+
+      - name: Create explicit pre-deploy snapshot
+        run: npm run deploy:snapshot
+
+      - name: Apply guarded staging deploy
+        env:
+          CORSYSTEM_DEPLOY_TARGET: staging
+          CORSYSTEM_DEPLOY_CONFIRM: APPLY-STAGING
+        run: npm run deploy:apply
+
+      - name: Verify migrated CorSystem database
+        run: npm run deploy:verify
+
+      - name: Roll back to legacy snapshot
+        env:
+          CORSYSTEM_ROLLBACK_TARGET: staging
+          CORSYSTEM_ROLLBACK_ALLOW_DESTRUCTIVE: "YES"
+          CORSYSTEM_ROLLBACK_CONFIRM: RESTORE-corsystem_deploy_ci
+        run: |
+          SNAPSHOT="$(ls -1t /tmp/corsystem-deploy-backups/*.sql | head -n 1)"
+          echo "Restoring $SNAPSHOT"
+          npm run deploy:rollback -- "$SNAPSHOT"
+
+      - name: Verify legacy state after rollback
+        run: npm run deploy:preflight -- --expect=legacy
+
+      - name: Rehearse guarded import from a RepairNOTE SQL dump
+        env:
+          CORSYSTEM_STAGING_IMPORT_CONFIRM: REPLACE-STAGING-corsystem_deploy_ci
+        run: |
+          SNAPSHOT="$(ls -1t /tmp/corsystem-deploy-backups/*.sql | head -n 1)"
+          npm run staging:from-dump -- --dump="$SNAPSHOT" --report=/tmp/staging-real-dump-report.json
+          test -s /tmp/staging-real-dump-report.json
+          cat /tmp/staging-real-dump-report.json
+
+      - name: Verify CorSystem after dump rehearsal
+        run: npm run deploy:verify

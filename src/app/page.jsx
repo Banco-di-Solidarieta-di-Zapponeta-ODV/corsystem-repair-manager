@@ -111,6 +111,8 @@ import {
   Textarea,
   Toolbar
 } from "@/components/ui";
+import { APP_DISPLAY_NAME } from "@/config/corsystem";
+import { legacyItalianText, legacyStatusLabelsIt } from "@/features/localization/legacy-it";
 
 const ICON = { size: 16, strokeWidth: 1.75 };
 const ICON_SM = { size: 14, strokeWidth: 1.75 };
@@ -124,11 +126,11 @@ const EMPTY_CLIENT = { name: "", phone: "", identity: "", email: "", address: ""
 const DEFAULT_CLIENT_LEVEL = "VIP";
 const clientLevels = [DEFAULT_CLIENT_LEVEL, "超级 VIP", "黑名单"];
 const scanShortcutOptions = ["F2", "F4", "F8", "CtrlOrMeta+K"];
-const APP_DISPLAY_NAME = "repuestomovil";
 const technicianColorOptions = ["#16a34a", "#2563eb", "#dc2626", "#9333ea", "#ea580c", "#0f766e", "#111827"];
 const languages = [
-  { value: "zh", label: "中文" },
-  { value: "es", label: "Español" }
+  { value: "it", label: "Italiano" },
+  { value: "es", label: "Español" },
+  { value: "zh", label: "中文" }
 ];
 
 const serviceZhMap = {
@@ -228,16 +230,15 @@ const statusClassMap = {
 const warrantyStatusOrder = statusOrder;
 const PAGE_PERMISSION_KEYS = ["repairs", "clients", "categories", "modules", "services", "attributes", "technicians", "reports", "finance", "settings", "backup"];
 const LEGACY_WHATSAPP_PROGRESS_TEMPLATE = "Hola, puede consultar el estado de su reparación aquí: {url}";
-const DEFAULT_WHATSAPP_PROGRESS_TEMPLATE = `Hola {name},
+const DEFAULT_WHATSAPP_PROGRESS_TEMPLATE = `Ciao {name},
 
-Somos {shop}.
-Puede consultar el estado de su reparación aquí:
+CorSystem ti informa che puoi consultare lo stato della riparazione qui:
 {url}
 
-Nº de orden: {ticket}
-Equipo: {device}
+Pratica: {ticket}
+Dispositivo: {device}
 
-Gracias.`;
+Grazie.`;
 
 function readThemePreference() {
   if (typeof window === "undefined") return "light";
@@ -263,8 +264,8 @@ function applyThemePreference(theme) {
 
 const uiText = {
   zh: {
-    appTitle: "repuestomovil",
-    loginTitle: "repuestomovil",
+    appTitle: APP_DISPLAY_NAME,
+    loginTitle: APP_DISPLAY_NAME,
     username: "账号",
     password: "密码",
     forgotPassword: "忘记密码",
@@ -740,8 +741,8 @@ const uiText = {
     publicNotFound: "没有找到这张维修单。",
     updatedAt: "更新时间",
     publicHint: "如需咨询，请联系店铺并提供维修单号。",
-    receiptTitle: "repuestomovil 小票",
-    a4Title: "repuestomovil 维修确认单",
+    receiptTitle: `${APP_DISPLAY_NAME} 小票`,
+    a4Title: `${APP_DISPLAY_NAME} 维修确认单`,
     repairDocTitle: "维修确认单",
     reservationDocTitle: "预定确认单",
     warrantyDocTitle: "保修确认单",
@@ -769,8 +770,8 @@ const uiText = {
     progress: "维修进度"
   },
   es: {
-    appTitle: "repuestomovil",
-    loginTitle: "repuestomovil",
+    appTitle: APP_DISPLAY_NAME,
+    loginTitle: APP_DISPLAY_NAME,
     username: "Usuario",
     password: "Contraseña",
     forgotPassword: "Olvidé mi contraseña",
@@ -1246,8 +1247,8 @@ const uiText = {
     publicNotFound: "No se encontró esta reparación.",
     updatedAt: "Actualizado",
     publicHint: "Para cualquier consulta, contacta con la tienda e indica el número de ticket.",
-    receiptTitle: "Ticket repuestomovil",
-    a4Title: "Hoja de reparación repuestomovil",
+    receiptTitle: `Ticket ${APP_DISPLAY_NAME}`,
+    a4Title: `Hoja de reparación ${APP_DISPLAY_NAME}`,
     repairDocTitle: "Hoja de reparación",
     reservationDocTitle: "Hoja de reserva",
     warrantyDocTitle: "Hoja de garantía",
@@ -1276,19 +1277,24 @@ const uiText = {
   }
 };
 
+// CorSystem usa l'italiano come lingua primaria. Le chiavi non ancora
+// migrate mantengono temporaneamente la traduzione spagnola, mai il cinese.
+uiText.it = { ...uiText.es, ...legacyItalianText };
+
 function getLang(settings) {
-  return settings?.uiLanguage || settings?.printLanguage || "zh";
+  return settings?.uiLanguage || settings?.printLanguage || "it";
 }
 
 function makeT(lang) {
-  const dict = uiText[lang] || uiText.zh;
+  const dict = uiText[lang] || uiText.it;
   return (key, vars = {}) => {
-    const value = dict[key] || uiText.zh[key] || key;
+    const fallback = lang === "zh" ? uiText.zh : uiText.it;
+    const value = dict[key] || fallback[key] || uiText.es[key] || key;
     return Object.entries(vars).reduce((text, [name, replacement]) => text.replaceAll(`{${name}}`, String(replacement)), value);
   };
 }
 
-function StatusPill({ status, lang = "zh" }) {
+function StatusPill({ status, lang = "it" }) {
   return (
     <span className={`status-pill ${statusClassMap[status] || "status-reserva"}`}>
       {statusLabel(status, lang)}
@@ -1903,7 +1909,7 @@ export default function AppPage() {
 }
 
 function Login({ onLogin, theme, onThemeChange }) {
-  const [lang, setLang] = useState("zh");
+  const [lang, setLang] = useState("it");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -3952,7 +3958,7 @@ function SettingsPage({ data, saveSettingsOnly, toast, t }) {
               <LabeledField className="col-12"><span>{t("publicBaseUrl")}</span><Input value={settings.publicBaseUrl || ""} onChange={(event) => update("publicBaseUrl", event.target.value)} placeholder={t("publicBaseUrlPlaceholder")} /></LabeledField>
               <LabeledField className="col-12"><span>{t("whatsappTemplate")}</span><Textarea value={whatsappTemplateValue(settings)} onChange={(event) => update("whatsappProgressTemplate", event.target.value)} placeholder={t("whatsappTemplatePlaceholder")} /></LabeledField>
               <LabeledField className="col-3"><span>{t("taxRate")}</span><Input type="number" value={settings.taxRate ?? 21} onChange={(event) => update("taxRate", Number(event.target.value || 0))} placeholder={t("taxRate")} /></LabeledField>
-              <LabeledField className="col-3"><span>{t("printLanguage")}</span><Select value={settings.printLanguage || "zh"} onChange={(event) => update("printLanguage", event.target.value)}>{languages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></LabeledField>
+              <LabeledField className="col-3"><span>{t("printLanguage")}</span><Select value={settings.printLanguage || "it"} onChange={(event) => update("printLanguage", event.target.value)}>{languages.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</Select></LabeledField>
               <LabeledField className="col-3"><span>{t("scanShortcut")}</span><Select value={settings.scanShortcut || "F2"} onChange={(event) => update("scanShortcut", event.target.value)}>{scanShortcutOptions.map((item) => <option key={item} value={item}>{scanShortcutLabel(item)}</option>)}</Select></LabeledField>
               <LabeledField className="col-3"><span>{t("defaultWarrantyDuration")}</span><Input type="number" min="1" step="1" value={warrantyDays(settings)} onChange={(event) => update("defaultWarrantyDays", Number(event.target.value || 90))} placeholder="90" /></LabeledField>
               <CheckboxLine className="col-12"><Checkbox checked={Boolean(settings.hideIssuer)} onChange={(event) => update("hideIssuer", event.target.checked)} /> {t("hideIssuer")}</CheckboxLine>
@@ -4336,7 +4342,7 @@ function attributeCatalogLabel(item = {}, lang = "zh") {
   const es = String(item.es || "").trim();
   const zh = String(item.zh || "").trim();
   const def = String(item.defaultName || "").trim();
-  if (lang === "es") return es || def || zh;
+  if ((lang === "es" || lang === "it")) return es || def || zh;
   return zh || def || es;
 }
 
@@ -4356,8 +4362,8 @@ function AttributeSelectionPanel({ value, onChange, items = [], lang = "zh", t }
     .map((label) => ({ id: `legacy-${label}`, label }));
   const mergedItems = [...legacySelected, ...uniqueItems];
   const visibleItems = mergedItems.filter((item) => !query.trim() || item.label.toLowerCase().includes(query.trim().toLowerCase()));
-  const selectedCountText = lang === "es" ? `${selected.length} seleccionados` : `已选 ${selected.length} 项`;
-  const clearText = lang === "es" ? "Limpiar selección" : "清空选择";
+  const selectedCountText = (lang === "es" || lang === "it") ? `${selected.length} seleccionados` : `已选 ${selected.length} 项`;
+  const clearText = (lang === "es" || lang === "it") ? "Limpiar selección" : "清空选择";
   const updateSelected = (items) => onChange(joinPropertyTokens(items));
   const toggleValue = (rawValue) => {
     const nextValue = String(rawValue || "").trim();
@@ -4383,7 +4389,7 @@ function AttributeSelectionPanel({ value, onChange, items = [], lang = "zh", t }
         <span><Tag {...ICON_SM} /> {t("property")}</span>
         <div className="attribute-search-field">
           <Search {...ICON_SM} />
-          <Input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={handleSearchKeyDown} placeholder={lang === "es" ? "Buscar atributo" : "搜索属性"} />
+          <Input value={query} onChange={(event) => setQuery(event.target.value)} onKeyDown={handleSearchKeyDown} placeholder={(lang === "es" || lang === "it") ? "Buscar atributo" : "搜索属性"} />
         </div>
       </div>
       <div className="attribute-options-list">
@@ -6227,7 +6233,7 @@ function formatDateInputDisplay(value, lang = "zh") {
   const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (!match) return "";
   const [, year, month, day] = match;
-  return lang === "es" ? `${day}/${month}/${year}` : `${year}/${month}/${day}`;
+  return (lang === "es" || lang === "it") ? `${day}/${month}/${year}` : `${year}/${month}/${day}`;
 }
 
 function clientLevelLabel(level, lang = "zh") {
@@ -6696,9 +6702,11 @@ function countStatuses(repairs) {
   }, Object.fromEntries(statusOrder.map((status) => [status, 0])));
 }
 
-function statusLabel(status, lang = "zh") {
+function statusLabel(status, lang = "it") {
   const normalized = normalizeStatus(status);
-  return (lang === "es" ? statusLabelsEs[normalized] : statusLabels[normalized]) || statusLabels[normalized] || normalized || status;
+  if (lang === "it") return legacyStatusLabelsIt[normalized] || legacyStatusLabelsIt[status] || normalized;
+  if (lang === "es") return statusLabelsEs[normalized] || statusLabelsEs[status] || normalized;
+  return statusLabels[normalized] || statusLabels[status] || normalized;
 }
 
 function warrantyStatusLabel(status, lang = "zh") {
@@ -6706,15 +6714,15 @@ function warrantyStatusLabel(status, lang = "zh") {
 }
 
 function catalogLabel(item, lang = "zh") {
-  if (lang === "es") return item.es || item.defaultName || item.zh || "";
+  if ((lang === "es" || lang === "it")) return item.es || item.defaultName || item.zh || "";
   return item.zh || serviceZhMap[item.defaultName] || item.defaultName;
 }
 
 function localizeText(value, lang = "zh") {
   const source = String(value || "");
-  const entries = Object.entries(lang === "es" ? serviceEsMap : serviceZhMap).sort((a, b) => b[0].length - a[0].length);
+  const entries = Object.entries((lang === "es" || lang === "it") ? serviceEsMap : serviceZhMap).sort((a, b) => b[0].length - a[0].length);
   const translated = entries.reduce((text, [from, to]) => text.replaceAll(from, to), source);
-  if (lang === "es") {
+  if ((lang === "es" || lang === "it")) {
     return translated
       .split("，")
       .map((part) => part.trim())
@@ -6736,7 +6744,7 @@ function repairContentLabel(repair, lang = "zh") {
       return qty > 1 ? `${qty}x ${name}` : name;
     })
     .filter(Boolean);
-  if (itemNames.length) return itemNames.join(lang === "es" ? ", " : "，");
+  if (itemNames.length) return itemNames.join((lang === "es" || lang === "it") ? ", " : "，");
   return localizeText(repair.issue || repair.warrantyReason, lang);
 }
 
@@ -6744,7 +6752,7 @@ function repairPrintProblemLabel(repair, lang = "zh") {
   const properties = splitPropertyTokens(repair?.properties || "")
     .map((item) => localizeText(item, lang).trim())
     .filter(Boolean)
-    .join(lang === "es" ? ", " : "，");
+    .join((lang === "es" || lang === "it") ? ", " : "，");
   return properties || repairContentLabel(repair, lang);
 }
 
@@ -6867,8 +6875,8 @@ function normalizeData(data) {
     parts: withSortOrders(data.parts || []),
     attributes: withSortOrders(data.attributes || []),
     settings: {
-      uiLanguage: "zh",
-      printLanguage: "zh",
+      uiLanguage: "it",
+      printLanguage: "it",
       scanShortcut: "F2",
       defaultWarrantyDays: 90,
       defaultWarrantyMonths: 3,
@@ -7156,7 +7164,7 @@ function shouldUseLegacyDeposit(repair) {
 function formatPaymentDate(value, lang = "zh") {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString(lang === "es" ? "es-ES" : "zh-CN", { hour12: false });
+  return date.toLocaleString((lang === "es" || lang === "it") ? "es-ES" : "zh-CN", { hour12: false });
 }
 
 function dateInRange(value, start, end) {
@@ -7213,8 +7221,8 @@ function paymentDisplayNote(payment = {}, t = makeT("zh"), lang = "zh") {
   if (isDepositAdjustment(payment)) return adjustmentTargetText(note, t("depositAdjustmentTo"));
   if (normalized.includes("订金") || normalized.includes("历史订金") || normalized.includes("depósito") || normalized.includes("deposito")) return t("depositPayment");
   if (normalized.includes("尾款") || normalized.includes("pago final")) return t("finalPayment");
-  if (normalized.includes("手动收款调整")) return lang === "es" ? "Ajuste manual de cobro" : "手动收款调整";
-  if (normalized.includes("手动退款调整")) return lang === "es" ? "Ajuste manual de devolución" : "手动退款调整";
+  if (normalized.includes("手动收款调整")) return (lang === "es" || lang === "it") ? "Ajuste manual de cobro" : "手动收款调整";
+  if (normalized.includes("手动退款调整")) return (lang === "es" || lang === "it") ? "Ajuste manual de devolución" : "手动退款调整";
   return note;
 }
 
@@ -7423,7 +7431,7 @@ function formatDateTimeDisplay(value, lang = "zh") {
   if (!raw) return "-";
   const date = new Date(raw.replace(" ", "T"));
   if (Number.isNaN(date.getTime())) return raw;
-  return date.toLocaleString(lang === "es" ? "es-ES" : "zh-CN", { hour12: false });
+  return date.toLocaleString((lang === "es" || lang === "it") ? "es-ES" : "zh-CN", { hour12: false });
 }
 
 function dateOnly(date) {
@@ -7720,7 +7728,21 @@ function buildPublicStatusUrl(settings, publicToken) {
 
 function whatsappTemplateValue(settings) {
   const value = String(settings?.whatsappProgressTemplate || "").trim();
-  if (!value || value === LEGACY_WHATSAPP_PROGRESS_TEMPLATE) return DEFAULT_WHATSAPP_PROGRESS_TEMPLATE;
+  const normalized = value.replace(/\r\n/g, "\n");
+  const legacyTemplates = [
+    LEGACY_WHATSAPP_PROGRESS_TEMPLATE,
+    `Hola {name},
+
+Somos {shop}.
+Puede consultar el estado de su reparación aquí:
+{url}
+
+Nº de orden: {ticket}
+Equipo: {device}
+
+Gracias.`
+  ].map((template) => template.trim().replace(/\r\n/g, "\n"));
+  if (!normalized || legacyTemplates.includes(normalized)) return DEFAULT_WHATSAPP_PROGRESS_TEMPLATE;
   return settings.whatsappProgressTemplate;
 }
 
@@ -7751,18 +7773,18 @@ function buildReceiptWhatsappMessage(settings, repair, client, { total = 0, paid
   const device = [repair?.brand, repair?.model].filter(Boolean).join(" / ");
   const shop = String(settings?.shopName || "").trim() || APP_DISPLAY_NAME;
   return [
-    `Hola ${name},`,
+    `Ciao ${name},`,
     "",
-    `Somos ${shop}. Le enviamos el resumen de su ticket:`,
-    `Nº de orden: ${repair?.ticket || ""}`,
-    `Equipo: ${device}`,
+    `${shop} ti invia il riepilogo della pratica:`,
+    `Pratica: ${repair?.ticket || ""}`,
+    `Dispositivo: ${device}`,
     `Total: ${money(total)}`,
-    `Pagado: ${money(paidTotal)}`,
-    `Pendiente: ${money(due)}`,
-    "Resumen de ticket para su comprobante.",
-    publicUrl ? `Seguimiento: ${publicUrl}` : "",
+    `Pagato: ${money(paidTotal)}`,
+    `Da pagare: ${money(due)}`,
+    "Conserva questo messaggio come riepilogo della pratica.",
+    publicUrl ? `Stato riparazione: ${publicUrl}` : "",
     "",
-    "Gracias."
+    "Grazie."
   ].filter((line) => line !== "").join("\n");
 }
 
@@ -8170,7 +8192,7 @@ function buildPrintHtml(mode, repair, client, { subtotal, total, due, qrDataUrl,
   </section>`;
   const receiptCopies = Math.max(1, Math.round(Number(copies) || 1));
   const extraSheets = narrow && receiptCopies > 1 ? Array.from({ length: receiptCopies - 1 }, () => `<main class="sheet receipt-copy-page">${sheetContent}</main>`).join("") : "";
-  return `<!doctype html><html lang="${lang === "es" ? "es" : "zh-CN"}"><head><meta charset="utf-8"><title>${escapeHtml(narrow ? t("receiptTitle") : docTitle)}</title><style>
+  return `<!doctype html><html lang="${(lang === "es" || lang === "it") ? "es" : "zh-CN"}"><head><meta charset="utf-8"><title>${escapeHtml(narrow ? t("receiptTitle") : docTitle)}</title><style>
     @page{size:${narrow ? "80mm 297mm" : "A4"};margin:${narrow ? "2mm" : "12mm"}}
     *{box-sizing:border-box}
     body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Arial,"PingFang SC",sans-serif;margin:0;padding:${narrow ? "0" : "0"};color:#1d1d1f;background:#fff;-webkit-font-smoothing:antialiased}

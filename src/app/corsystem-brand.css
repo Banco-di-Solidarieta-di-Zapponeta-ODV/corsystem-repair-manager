@@ -1,0 +1,103 @@
+:root {
+  --corsystem-brand-blue: #37499f;
+  --corsystem-brand-gray: #636363;
+  --corsystem-brand-blue-soft: #eef1ff;
+}
+
+/* Legacy RepairNOTE shell: CorSystem identity layer */
+.login-page {
+  position: relative;
+  background:
+    radial-gradient(circle at 18% 12%, rgba(55, 73, 159, 0.12), transparent 34%),
+    linear-gradient(145deg, #f8f9fc 0%, #eef1f7 100%);
+}
+
+.login-logo {
+  width: min(330px, 82vw);
+  height: 185px;
+  margin: 0 auto 8px;
+  background: url("/brand/corsystem-logo.svg") center / contain no-repeat;
+  font-size: 0 !important;
+  line-height: 0;
+}
+
+.login-card {
+  border-top: 4px solid var(--corsystem-brand-blue) !important;
+  box-shadow: 0 24px 70px rgba(23, 32, 51, 0.14) !important;
+}
+
+.login-title {
+  font-size: 0 !important;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.login-title::after {
+  content: "Accesso operatori";
+  color: #172033;
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.login-card button[type="submit"] {
+  background: var(--corsystem-brand-blue) !important;
+  border-color: var(--corsystem-brand-blue) !important;
+  color: #fff !important;
+}
+
+.login-page::after {
+  content: "CORSYSTEM HUB TECNOLOGICO  ·  Corso Manfredonia n. 4, Zapponeta  ·  P.IVA 04194770717  ·  Tel/WhatsApp 3283645185";
+  position: fixed;
+  left: 50%;
+  bottom: 22px;
+  transform: translateX(-50%);
+  width: min(920px, calc(100vw - 36px));
+  color: var(--corsystem-brand-gray);
+  text-align: center;
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.sidebar .brand-title {
+  min-height: 88px;
+  padding: 8px 12px !important;
+  background: url("/brand/corsystem-logo.svg") left center / 168px auto no-repeat;
+  font-size: 0 !important;
+  line-height: 0;
+}
+
+.sidebar .brand-title svg {
+  display: none !important;
+}
+
+.sidebar .side-menu [aria-current="page"],
+.sidebar .side-menu .active {
+  accent-color: var(--corsystem-brand-blue);
+}
+
+@media (max-width: 720px) {
+  .login-logo {
+    height: 145px;
+    width: min(280px, 78vw);
+  }
+
+  .login-page::after {
+    position: static;
+    transform: none;
+    display: block;
+    width: auto;
+    margin: 20px 24px;
+  }
+
+  .sidebar .brand-title {
+    min-height: 62px;
+    background-size: 126px auto;
+  }
+}
+
+@media print {
+  .login-page::after {
+    display: none;
+  }
+}

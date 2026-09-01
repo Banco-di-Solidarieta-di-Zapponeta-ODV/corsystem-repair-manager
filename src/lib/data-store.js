@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/auth";
-import { defaultSettings, normalizeStatus, statusOrder } from "@/lib/seed-data";
+import { defaultSettings, defaultWhatsappProgressTemplate, normalizeStatus, statusOrder } from "@/lib/seed-data";
 import { buildRepairSearchText, ticketSortValue } from "@/lib/search-text";
 import { computeListAggregates } from "@/lib/repair-amounts";
 import crypto from "crypto";
@@ -18,6 +18,20 @@ const dbSortOrder = (value, fallback = 0) => {
   return Number.isFinite(number) ? Math.trunc(number) : fallback;
 };
 const DEFAULT_TECHNICIAN_COLOR = "#16a34a";
+const LEGACY_WHATSAPP_PROGRESS_TEMPLATES = new Set([
+  "Hola, puede consultar el estado de su reparación aquí: {url}",
+  "Hola {name},\n\nSomos {shop}.\nPuede consultar el estado de su reparación aquí:\n{url}\n\nNº de orden: {ticket}\nEquipo: {device}\n\nGracias."
+].map((value) => value.trim().replace(/\r\n/g, "\n")));
+
+function normalizeCorSystemSettings(value = {}) {
+  const stored = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const settings = { ...defaultSettings, ...stored };
+  const currentTemplate = String(stored.whatsappProgressTemplate || "").trim().replace(/\r\n/g, "\n");
+  if (!currentTemplate || LEGACY_WHATSAPP_PROGRESS_TEMPLATES.has(currentTemplate)) {
+    settings.whatsappProgressTemplate = defaultWhatsappProgressTemplate;
+  }
+  return settings;
+}
 
 function formatClientName(value) {
   return String(value || "")
@@ -79,6 +93,16 @@ export async function getBootstrapData(options = {}) {
     prisma.setting.findUnique({ where: { id: "main" } })
   ]);
   const totalsByRepair = new Map((itemTotals || []).map((row) => [row.repairId, row]));
+  const storedSettings = settings?.value && typeof settings.value === "object" && !Array.isArray(settings.value) ? settings.value : {};
+  const normalizedSettings = normalizeCorSystemSettings(storedSettings);
+  let settingsUpdatedAt = settings?.updatedAt?.toISOString?.() || "";
+  if (settings && normalizedSettings.whatsappProgressTemplate !== storedSettings.whatsappProgressTemplate) {
+    const savedSettings = await prisma.setting.update({
+      where: { id: "main" },
+      data: { value: { ...storedSettings, whatsappProgressTemplate: normalizedSettings.whatsappProgressTemplate } }
+    });
+    settingsUpdatedAt = savedSettings.updatedAt?.toISOString?.() || settingsUpdatedAt;
+  }
 
   const data = {
     users: staff.map(({ passwordHash, sessionTokenHash, sessionExpiresAt, ...item }) => item),
@@ -89,8 +113,8 @@ export async function getBootstrapData(options = {}) {
     services: services.map((item) => ({ ...item, category: item.category || "", price: moneyNumber(item.price) })),
     parts: parts.map((item) => ({ ...item, category: item.category || "", price: moneyNumber(item.price) })),
     attributes: groups.flatMap((group) => group.attributes.map((item) => ({ ...item, groupName: group.name }))),
-    settings: { ...defaultSettings, ...(settings?.value || {}) },
-    _settingsUpdatedAt: settings?.updatedAt?.toISOString?.() || "",
+    settings: normalizedSettings,
+    _settingsUpdatedAt: settingsUpdatedAt,
     repairs: repairs.map((repair) => serializeRepair(repair, totalsByRepair.get(repair.id), includeRepairItems))
   };
   return { ...data, _revision: await getBusinessRevision() };
