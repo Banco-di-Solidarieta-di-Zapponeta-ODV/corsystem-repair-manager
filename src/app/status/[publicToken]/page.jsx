@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import "@/app/globals.css";
+import { APP_DISPLAY_NAME } from "@/config/corsystem";
 
-const APP_DISPLAY_NAME = "repuestomovil";
 const statusSteps = ["预定", "预定到货", "维修中", "完成", "已取走"];
 const publicStatusLabels = {
   zh: {

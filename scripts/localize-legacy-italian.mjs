@@ -69,7 +69,7 @@ if (statusFunction.test(page) && !page.includes(`legacyStatusLabelsIt[normalized
 }
 
 // Titoli e messaggi legacy usati prima che siano disponibili le impostazioni server.
-page = page.replace(/const APP_DISPLAY_NAME = "repuestomovil";/g, `const APP_DISPLAY_NAME = "CorSystem";`);
+page = page.replace(/const APP_DISPLAY_NAME = "[^"]+";/g, `const APP_DISPLAY_NAME = "CorSystem";`);
 page = page.replace(
   /const DEFAULT_WHATSAPP_PROGRESS_TEMPLATE = `Hola \{name\},[\s\S]*?Gracias\.`;/,
   `const DEFAULT_WHATSAPP_PROGRESS_TEMPLATE = \`Ciao {name},\n\nCorSystem ti informa che puoi consultare lo stato della riparazione qui:\n{url}\n\nPratica: {ticket}\nDispositivo: {device}\n\nGrazie.\`;`

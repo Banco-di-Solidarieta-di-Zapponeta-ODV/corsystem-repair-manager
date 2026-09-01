@@ -111,6 +111,7 @@ import {
   Textarea,
   Toolbar
 } from "@/components/ui";
+import { APP_DISPLAY_NAME } from "@/config/corsystem";
 import { legacyItalianText, legacyStatusLabelsIt } from "@/features/localization/legacy-it";
 
 const ICON = { size: 16, strokeWidth: 1.75 };
@@ -125,7 +126,6 @@ const EMPTY_CLIENT = { name: "", phone: "", identity: "", email: "", address: ""
 const DEFAULT_CLIENT_LEVEL = "VIP";
 const clientLevels = [DEFAULT_CLIENT_LEVEL, "超级 VIP", "黑名单"];
 const scanShortcutOptions = ["F2", "F4", "F8", "CtrlOrMeta+K"];
-const APP_DISPLAY_NAME = "CorSystem";
 const technicianColorOptions = ["#16a34a", "#2563eb", "#dc2626", "#9333ea", "#ea580c", "#0f766e", "#111827"];
 const languages = [
   { value: "it", label: "Italiano" },
@@ -264,8 +264,8 @@ function applyThemePreference(theme) {
 
 const uiText = {
   zh: {
-    appTitle: "repuestomovil",
-    loginTitle: "repuestomovil",
+    appTitle: APP_DISPLAY_NAME,
+    loginTitle: APP_DISPLAY_NAME,
     username: "账号",
     password: "密码",
     forgotPassword: "忘记密码",
@@ -741,8 +741,8 @@ const uiText = {
     publicNotFound: "没有找到这张维修单。",
     updatedAt: "更新时间",
     publicHint: "如需咨询，请联系店铺并提供维修单号。",
-    receiptTitle: "repuestomovil 小票",
-    a4Title: "repuestomovil 维修确认单",
+    receiptTitle: `${APP_DISPLAY_NAME} 小票`,
+    a4Title: `${APP_DISPLAY_NAME} 维修确认单`,
     repairDocTitle: "维修确认单",
     reservationDocTitle: "预定确认单",
     warrantyDocTitle: "保修确认单",
@@ -770,8 +770,8 @@ const uiText = {
     progress: "维修进度"
   },
   es: {
-    appTitle: "repuestomovil",
-    loginTitle: "repuestomovil",
+    appTitle: APP_DISPLAY_NAME,
+    loginTitle: APP_DISPLAY_NAME,
     username: "Usuario",
     password: "Contraseña",
     forgotPassword: "Olvidé mi contraseña",
@@ -1247,8 +1247,8 @@ const uiText = {
     publicNotFound: "No se encontró esta reparación.",
     updatedAt: "Actualizado",
     publicHint: "Para cualquier consulta, contacta con la tienda e indica el número de ticket.",
-    receiptTitle: "Ticket repuestomovil",
-    a4Title: "Hoja de reparación repuestomovil",
+    receiptTitle: `Ticket ${APP_DISPLAY_NAME}`,
+    a4Title: `Hoja de reparación ${APP_DISPLAY_NAME}`,
     repairDocTitle: "Hoja de reparación",
     reservationDocTitle: "Hoja de reserva",
     warrantyDocTitle: "Hoja de garantía",
@@ -7728,7 +7728,21 @@ function buildPublicStatusUrl(settings, publicToken) {
 
 function whatsappTemplateValue(settings) {
   const value = String(settings?.whatsappProgressTemplate || "").trim();
-  if (!value || value === LEGACY_WHATSAPP_PROGRESS_TEMPLATE) return DEFAULT_WHATSAPP_PROGRESS_TEMPLATE;
+  const normalized = value.replace(/\r\n/g, "\n");
+  const legacyTemplates = [
+    LEGACY_WHATSAPP_PROGRESS_TEMPLATE,
+    `Hola {name},
+
+Somos {shop}.
+Puede consultar el estado de su reparación aquí:
+{url}
+
+Nº de orden: {ticket}
+Equipo: {device}
+
+Gracias.`
+  ].map((template) => template.trim().replace(/\r\n/g, "\n"));
+  if (!normalized || legacyTemplates.includes(normalized)) return DEFAULT_WHATSAPP_PROGRESS_TEMPLATE;
   return settings.whatsappProgressTemplate;
 }
 
@@ -7759,18 +7773,18 @@ function buildReceiptWhatsappMessage(settings, repair, client, { total = 0, paid
   const device = [repair?.brand, repair?.model].filter(Boolean).join(" / ");
   const shop = String(settings?.shopName || "").trim() || APP_DISPLAY_NAME;
   return [
-    `Hola ${name},`,
+    `Ciao ${name},`,
     "",
-    `Somos ${shop}. Le enviamos el resumen de su ticket:`,
-    `Nº de orden: ${repair?.ticket || ""}`,
-    `Equipo: ${device}`,
+    `${shop} ti invia il riepilogo della pratica:`,
+    `Pratica: ${repair?.ticket || ""}`,
+    `Dispositivo: ${device}`,
     `Total: ${money(total)}`,
-    `Pagado: ${money(paidTotal)}`,
-    `Pendiente: ${money(due)}`,
-    "Resumen de ticket para su comprobante.",
-    publicUrl ? `Seguimiento: ${publicUrl}` : "",
+    `Pagato: ${money(paidTotal)}`,
+    `Da pagare: ${money(due)}`,
+    "Conserva questo messaggio come riepilogo della pratica.",
+    publicUrl ? `Stato riparazione: ${publicUrl}` : "",
     "",
-    "Gracias."
+    "Grazie."
   ].filter((line) => line !== "").join("\n");
 }
 
