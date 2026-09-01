@@ -4,6 +4,8 @@ import { notFound, redirect } from "next/navigation";
 import { canAccessPage, getCurrentStaff } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import PrintActions from "@/components/corsystem/PrintActions";
+import BrandIdentity from "@/components/corsystem/BrandIdentity";
+import { COMPANY_PROFILE } from "@/config/corsystem";
 import {
   customerStatusUrl,
   deviceDisplayName,
@@ -47,10 +49,6 @@ export default async function IntakeReceiptPage({ params, searchParams }) {
     ? await QRCode.toDataURL(statusUrl, { errorCorrectionLevel: "M", margin: 1, width: 320 })
     : "";
 
-  const shopName = String(settings.shopName || "CorSystem").trim() || "CorSystem";
-  const shopAddress = String(settings.shopAddress || "").trim();
-  const shopTaxId = String(settings.shopTaxId || "").trim();
-  const phone = String(settings.phone || "").trim();
   const deviceName = deviceDisplayName(repair.device || {}, repair);
   const identifier = deviceIdentifier(repair.device || {}, repair);
   const acceptedAt = intake.acceptedAt || repair.createdAt;
@@ -66,15 +64,14 @@ export default async function IntakeReceiptPage({ params, searchParams }) {
         <style>{isThermal ? "@page { size: 80mm auto; margin: 4mm; }" : "@page { size: A4; margin: 12mm; }"}</style>
 
         <header className={styles.header}>
-          <div>
-            <div className={styles.brand}>{shopName}</div>
-            <div className={styles.subtitle}>Repair Manager · Accettazione laboratorio</div>
-          </div>
-          <div className={styles.issuer}>
-            {shopAddress ? <div>{shopAddress}</div> : null}
-            {phone ? <div>Tel. {phone}</div> : null}
-            {shopTaxId ? <div>P.IVA / CF {shopTaxId}</div> : null}
-          </div>
+          <BrandIdentity variant="document" showDetails={!isThermal} />
+          {isThermal ? (
+            <div className={styles.issuer}>
+              <div>{COMPANY_PROFILE.address}</div>
+              <div>Tel/WhatsApp {COMPANY_PROFILE.phone}</div>
+              <div>P.IVA {COMPANY_PROFILE.vatNumber}</div>
+            </div>
+          ) : null}
         </header>
 
         <div className={styles.ticketBlock}>
@@ -170,7 +167,8 @@ export default async function IntakeReceiptPage({ params, searchParams }) {
         ) : null}
 
         <footer className={styles.footer}>
-          {shopName} · pratica {repair.ticket} · documento generato da CorSystem Repair Manager
+          {COMPANY_PROFILE.displayName} · P.IVA {COMPANY_PROFILE.vatNumber} · Tel/WhatsApp {COMPANY_PROFILE.phone}<br />
+          pratica {repair.ticket} · documento generato da CorSystem Repair Manager
         </footer>
       </article>
     </main>
