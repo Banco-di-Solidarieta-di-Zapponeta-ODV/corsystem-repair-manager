@@ -1,5 +1,7 @@
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import BrandIdentity from "@/components/corsystem/BrandIdentity";
+import { COMPANY_PROFILE, companyPhoneHref } from "@/config/corsystem";
 import {
   CUSTOMER_PROGRESS_STEPS,
   customerProgress,
@@ -18,23 +20,16 @@ export const metadata = {
 
 export default async function CustomerRepairStatusPage({ params }) {
   const { publicToken } = await params;
-  const [repair, settingRecord] = await Promise.all([
-    prisma.repair.findUnique({
-      where: { publicToken },
-      include: {
-        client: true,
-        device: true
-      }
-    }),
-    prisma.setting.findUnique({ where: { id: "main" } })
-  ]);
+  const repair = await prisma.repair.findUnique({
+    where: { publicToken },
+    include: {
+      client: true,
+      device: true
+    }
+  });
 
   if (!repair) notFound();
 
-  const settings = settingRecord?.value || {};
-  const shopName = String(settings.shopName || "CorSystem").trim() || "CorSystem";
-  const shopAddress = String(settings.shopAddress || "").trim();
-  const phone = String(settings.phone || "").trim();
   const statusLabel = repairStatusLabel(repair.status);
   const progress = customerProgress(repair.status);
   const deviceName = deviceDisplayName(repair.device || {}, repair);
@@ -45,7 +40,7 @@ export default async function CustomerRepairStatusPage({ params }) {
     <main className={styles.page}>
       <div className={styles.shell}>
         <header className={styles.header}>
-          <div className={styles.brand}>{shopName} · Repair Manager</div>
+          <BrandIdentity variant="public" />
           <h1 className={styles.title}>Stato della riparazione</h1>
           <div className={styles.ticket}>{repair.ticket}</div>
 
@@ -90,19 +85,19 @@ export default async function CustomerRepairStatusPage({ params }) {
           <div className={styles.hint}>{hint}</div>
         </section>
 
-        {(phone || shopAddress) ? (
-          <section className={styles.card}>
-            <h2 className={styles.cardTitle}>Contatti</h2>
-            <div className={styles.contact}>
-              {phone ? <a href={`tel:${phone.replace(/\s+/g, "")}`}>{phone}</a> : null}
-              {shopAddress ? <span>{shopAddress}</span> : null}
-            </div>
-          </section>
-        ) : null}
+        <section className={styles.card}>
+          <h2 className={styles.cardTitle}>Contatti CorSystem</h2>
+          <div className={styles.contact}>
+            <a href={companyPhoneHref()}>Tel/WhatsApp {COMPANY_PROFILE.phone}</a>
+            <span>{COMPANY_PROFILE.address}</span>
+            <span>P.IVA {COMPANY_PROFILE.vatNumber}</span>
+            <span>{COMPANY_PROFILE.email}</span>
+          </div>
+        </section>
 
         <footer className={styles.footer}>
           Per assistenza comunica sempre il numero pratica {repair.ticket}.<br />
-          {shopName} · stato consultabile tramite codice personale della pratica.
+          {COMPANY_PROFILE.displayName} · stato consultabile tramite codice personale della pratica.
         </footer>
       </div>
     </main>
