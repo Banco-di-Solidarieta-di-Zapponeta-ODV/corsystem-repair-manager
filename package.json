@@ -1,11 +1,11 @@
 {
-  "name": "repairnote",
-  "version": "1.0.0",
-  "description": "Repair shop management system built with Next.js, Prisma, and MySQL/MariaDB.",
+  "name": "corsystem-repair-manager",
+  "version": "0.1.0",
+  "description": "CorSystem Repair Manager - gestione clienti, dispositivi, riparazioni, tecnici, preventivi, ricambi, pagamenti e notifiche.",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/srmming/repairnote-open-source.git"
+    "url": "https://github.com/Banco-di-Solidarieta-di-Zapponeta-ODV/corsystem-repair-manager.git"
   },
   "engines": {
     "node": ">=24"
