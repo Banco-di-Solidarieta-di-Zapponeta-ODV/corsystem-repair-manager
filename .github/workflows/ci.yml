@@ -46,3 +46,83 @@ jobs:
 
       - name: Build application
         run: npm run build
+
+  characterization:
+    name: Characterization smoke
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: repairnote_ci
+          MYSQL_USER: repairnote
+          MYSQL_PASSWORD: repairnote
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      DATABASE_URL: mysql://repairnote:repairnote@127.0.0.1:3306/repairnote_ci
+      REPAIRNOTE_ADMIN_USERNAME: ci-admin
+      REPAIRNOTE_ADMIN_PASSWORD: ci-smoke-password-not-for-production
+      REPAIRNOTE_COOKIE_SECURE: "false"
+      REPAIRNOTE_SEED_DEMO: "true"
+      BASE_URL: http://127.0.0.1:3000
+      SMOKE_USERNAME: ci-admin
+      SMOKE_PASSWORD: ci-smoke-password-not-for-production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chrome for Playwright
+        run: npx playwright install --with-deps chrome
+
+      - name: Apply database migrations
+        run: npm run db:migrate:deploy
+
+      - name: Seed isolated CI database
+        run: npm run db:seed
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start application and wait for readiness
+        run: |
+          npm start > /tmp/repairnote.log 2>&1 &
+          echo $! > /tmp/repairnote.pid
+          for attempt in {1..45}; do
+            if curl --fail --silent --show-error "$BASE_URL" > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Application did not become ready"
+          cat /tmp/repairnote.log
+          exit 1
+
+      - name: Run characterization smoke
+        run: npm run smoke
+
+      - name: Upload application log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repairnote-ci-log
+          path: /tmp/repairnote.log
+          if-no-files-found: ignore
