@@ -93,8 +93,8 @@ jobs:
       - name: Verify preinstalled Chrome
         run: google-chrome --version
 
-      - name: Apply database migrations
-        run: npm run db:migrate:deploy
+      - name: Prepare isolated CI schema
+        run: npx prisma db push --skip-generate
 
       - name: Seed isolated CI database
         run: npm run db:seed
