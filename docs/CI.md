@@ -1,7 +1,7 @@
-# CorSystem Repair Manager - CI Baseline
+# CorSystem Repair Manager - CI
 
 ## Purpose
-The CI workflow protects `main` from obvious dependency, Prisma schema and production-build regressions before larger refactors begin.
+The CI workflow protects `main` from dependency, Prisma schema, production-build and critical workflow regressions before larger refactors begin.
 
 ## Trigger
 The workflow runs on:
@@ -9,16 +9,30 @@ The workflow runs on:
 - pushes to `main`;
 - manual `workflow_dispatch` runs.
 
-## Baseline checks
+## Job 1 - Build and validate
 1. Checkout repository.
 2. Use the Node version declared in `.node-version`.
-3. Install exactly the locked dependencies with `npm ci`.
+3. Install locked dependencies with `npm ci`.
 4. Validate the Prisma schema.
 5. Generate the Prisma client.
 6. Build the Next.js application.
 
-## Local equivalent
-Run before opening a PR:
+## Job 2 - Characterization smoke
+The smoke job uses a disposable MySQL 8.4 service. It never connects to production data.
+
+It performs:
+1. `npm ci`;
+2. install Chrome for Playwright;
+3. deploy Prisma migrations to the isolated database;
+4. seed deterministic demo/test data;
+5. build and start the application;
+6. run the existing `npm run smoke` browser suite;
+7. upload the server log when the job fails.
+
+The current smoke suite exercises login failure/success, language switching, clients, catalog data, staff, technicians, repair creation/editing, warranty flow, reports/settings/backup and the public repair status page.
+
+## Local baseline
+Before opening a PR, at minimum run:
 
 ```bash
 npm ci
@@ -27,10 +41,14 @@ npx prisma generate
 npm run build
 ```
 
-A syntactically valid `DATABASE_URL` is required by Prisma even when the baseline job does not connect to a live database.
+For the full browser characterization suite, use an isolated MySQL/MariaDB database, apply migrations, seed demo data, start the built application and run:
+
+```bash
+npm run smoke
+```
 
 ## Secrets and data
-The baseline workflow does not use production secrets or real customer data. Values in CI are disposable placeholders and must never be reused in production.
+CI uses disposable placeholder credentials only. Production secrets, customer data, backups and screenshots must never be copied into the workflow or test fixtures.
 
-## Next step
-Characterization and browser smoke tests will be added separately after their database fixtures and lifecycle are made deterministic. This keeps the first CI change small and diagnosable.
+## Evolution
+Future tests should be added as small focused checks around domain rules and APIs. The broad browser smoke suite remains a regression safety net, not a replacement for unit/integration tests.
